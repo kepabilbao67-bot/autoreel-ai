@@ -1,6 +1,7 @@
 'use client'
 
-import { Video, Eye, TrendingUp, Zap, Plus, Clock, ArrowUpRight } from 'lucide-react'
+import { useState } from 'react'
+import { Video, Eye, TrendingUp, Zap, Plus, Clock, ArrowUpRight, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -28,6 +29,28 @@ const trends = [
 ]
 
 export default function DashboardPage() {
+  const [aiQuery, setAiQuery] = useState('')
+
+  // Abrir el chatbot con una pregunta desde el input rapido
+  const handleAiQuery = () => {
+    if (!aiQuery.trim()) return
+    // Disparar click en el boton flotante del chatbot y enviar el mensaje
+    const chatButton = document.querySelector('[aria-label="Abrir asistente IA"]') as HTMLButtonElement
+    if (chatButton) chatButton.click()
+    // Esperar a que se abra el chat y poner el texto en el input
+    setTimeout(() => {
+      const chatInput = document.querySelector('[placeholder="Escribe tu pregunta..."]') as HTMLInputElement
+      if (chatInput) {
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set
+        nativeInputValueSetter?.call(chatInput, aiQuery)
+        chatInput.dispatchEvent(new Event('input', { bubbles: true }))
+        // Simular Enter
+        chatInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+      }
+    }, 400)
+    setAiQuery('')
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -41,10 +64,45 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* Seccion Pregunta a la IA */}
+      <div className="relative overflow-hidden rounded-2xl border border-primary-500/20 bg-gradient-to-r from-primary-500/5 via-dark-bg to-primary-500/5 p-6">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary-500/5 to-transparent pointer-events-none" />
+        <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-purple flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-white">Pregunta a la IA</h3>
+              <p className="text-xs text-dark-muted">Ideas, tendencias, horarios y mas</p>
+            </div>
+          </div>
+          <div className="flex-1 w-full sm:w-auto">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={aiQuery}
+                onChange={(e) => setAiQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAiQuery()}
+                placeholder="Ej: Dame ideas para un video de cocina..."
+                className="flex-1 bg-dark-hover/50 border border-dark-border rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-dark-muted focus:outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/25 transition-colors"
+              />
+              <button
+                onClick={handleAiQuery}
+                className="px-4 py-2.5 rounded-xl bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="hidden sm:inline">Preguntar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.label}>
+        {stats.map((stat, index) => (
+          <Card key={stat.label} className="transition-transform duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-primary-500/5">
             <CardContent>
               <div className="flex items-center justify-between">
                 <div>
@@ -52,7 +110,7 @@ export default function DashboardPage() {
                   <p className="text-2xl font-bold mt-1">{stat.value}</p>
                   <p className="text-xs text-dark-muted mt-1">{stat.change}</p>
                 </div>
-                <div className={`w-10 h-10 rounded-xl bg-dark-hover flex items-center justify-center ${stat.color}`}>
+                <div className={`w-10 h-10 rounded-xl bg-dark-hover flex items-center justify-center ${stat.color}`} style={{ animationDelay: `${index * 100}ms` }}>
                   <stat.icon className="w-5 h-5" />
                 </div>
               </div>

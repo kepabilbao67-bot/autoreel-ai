@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { NotificationBell } from '@/components/shared/NotificationBell'
+import { AIChatbot } from '@/components/chat/AIChatbot'
 
 // Layout del dashboard con sidebar
 const navItems = [
@@ -170,6 +171,9 @@ export default function DashboardLayout({
         {/* Page content */}
         <main className="p-4 sm:p-6 lg:p-8">{children}</main>
       </div>
+
+      {/* Chatbot de IA flotante */}
+      <AIChatbot />
     </div>
   )
 }
