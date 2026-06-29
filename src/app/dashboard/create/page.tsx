@@ -558,6 +558,9 @@ Generado con AutoReel AI - autoreel-ai.vercel.app
               subtitle="Los subtitulos apareceran aqui..."
               platform={formData.platform as 'tiktok' | 'reels' | 'shorts'}
               duration={formData.duration}
+              images={uploadedFiles.filter(f => f.preview).map(f => f.preview!)}
+              subtitles={result.subtitles}
+              script={result.script}
             />
           </div>
         </div>
