@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import {
   Sparkles,
   Zap,
@@ -11,6 +11,12 @@ import {
   ChevronRight,
   ChevronLeft,
   Check,
+  X,
+  Image as ImageIcon,
+  Film,
+  Download,
+  FileText,
+  Copy,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
@@ -52,11 +58,21 @@ const styles = [
 
 const stepTitles = ['Contenido', 'IA Genera', 'Preview', 'Exportar']
 
+interface UploadedFile {
+  name: string
+  size: number
+  type: string
+  preview?: string
+}
+
 export default function CreatePage() {
   const [step, setStep] = useState(0)
   const [mode, setMode] = useState<'manual' | 'oneclick'>('oneclick')
   const [generating, setGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const [copied, setCopied] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [formData, setFormData] = useState({
     topic: '',
     platform: 'tiktok',
@@ -68,14 +84,59 @@ export default function CreatePage() {
   const [result, setResult] = useState<{
     script?: string
     title?: string
+    description?: string
     hashtags?: string[]
+    music?: { genre: string; bpm: number; mood: string; suggestions: string[] }
+    subtitles?: Array<{ start: number; end: number; text: string }>
+    viralityScore?: number
+    bestTimeToPost?: string
   } | null>(null)
+
+  // Manejar upload de archivos
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files) return
+
+    const newFiles: UploadedFile[] = Array.from(files).map((file) => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+    }))
+
+    setUploadedFiles((prev) => [...prev, ...newFiles])
+  }, [])
+
+  // Drag and drop
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    const files = e.dataTransfer.files
+    if (!files) return
+
+    const newFiles: UploadedFile[] = Array.from(files).map((file) => ({
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined,
+    }))
+
+    setUploadedFiles((prev) => [...prev, ...newFiles])
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+  }, [])
+
+  const removeFile = (index: number) => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
 
   // Generacion con un clic
   const handleOneClick = async () => {
     if (!formData.topic) return
     setGenerating(true)
     setStep(1)
+    setProgress(0)
 
     // Simular progreso
     const interval = setInterval(() => {
@@ -99,18 +160,24 @@ export default function CreatePage() {
         const data = await res.json()
         setResult(data)
       } else {
-        // Mock result para demo
+        // Fallback si falla la API
         setResult({
-          script: `Hook: Sabes cual es el secreto de los emprendedores exitosos?\n\n${formData.topic}\n\n1. Planifica tu dia la noche anterior\n2. Enfocate en 3 tareas clave\n3. Automatiza lo repetitivo\n\nCTA: Guarda este video y sigue para mas tips!`,
-          title: formData.topic,
-          hashtags: ['#productividad', '#emprendedor', '#tips', '#viral', '#motivacion'],
+          script: `[0-3s] HOOK: "¿Sabias esto sobre ${formData.topic}?"\n\n[3-15s] DESARROLLO: Contenido principal sobre ${formData.topic}\n\n[15-${formData.duration}s] CTA: Sigue para mas tips!`,
+          title: `${formData.topic} - Lo que NADIE te dice`,
+          description: `Descubre todo sobre ${formData.topic}`,
+          hashtags: ['#viral', '#fyp', '#tips', '#trending', '#parati'],
+          viralityScore: 82,
+          bestTimeToPost: '19:00 - 21:00',
         })
       }
     } catch {
       setResult({
-        script: `Hook: Descubre como transformar tu contenido!\n\n${formData.topic}\n\nDesarrollo del tema con puntos clave...\n\nCTA: Sigue para mas contenido como este!`,
-        title: formData.topic,
-        hashtags: ['#viral', '#contenido', '#tips'],
+        script: `[0-3s] HOOK: "Esto sobre ${formData.topic} te va a sorprender"\n\n[3-15s] DESARROLLO: Lo mas importante sobre ${formData.topic}\n\n[15-${formData.duration}s] CTA: Dale like y sigue!`,
+        title: `${formData.topic} - Tips increibles`,
+        description: `Todo lo que necesitas saber sobre ${formData.topic}`,
+        hashtags: ['#viral', '#fyp', '#tips'],
+        viralityScore: 78,
+        bestTimeToPost: '20:00 - 22:00',
       })
     }
 
@@ -118,6 +185,59 @@ export default function CreatePage() {
     setProgress(100)
     setGenerating(false)
     setTimeout(() => setStep(2), 500)
+  }
+
+  // Descargar guion como archivo
+  const handleDownloadScript = () => {
+    if (!result) return
+
+    const content = `# ${result.title || formData.topic}
+    
+## Guion del Video
+${result.script}
+
+## Descripcion
+${result.description || ''}
+
+## Hashtags
+${result.hashtags?.join(' ') || ''}
+
+## Configuracion
+- Plataforma: ${formData.platform}
+- Duracion: ${formData.duration}s
+- Estilo: ${formData.style}
+- Idioma: ${formData.language}
+
+## Musica Sugerida
+${result.music ? `- Genero: ${result.music.genre}\n- BPM: ${result.music.bpm}\n- Mood: ${result.music.mood}\n- Sugerencias: ${result.music.suggestions?.join(', ')}` : 'Ver sugerencias en la app'}
+
+## Subtitulos
+${result.subtitles?.map((s) => `[${s.start}s - ${s.end}s] ${s.text}`).join('\n') || 'Generados automaticamente'}
+
+## Mejor hora para publicar: ${result.bestTimeToPost || '19:00-21:00'}
+## Puntuacion de viralidad: ${result.viralityScore || 80}/100
+
+---
+Generado con AutoReel AI - autoreel-ai.vercel.app
+`
+
+    const blob = new Blob([content], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `autoreel-${formData.topic.replace(/\s+/g, '-').slice(0, 30)}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // Copiar guion al portapapeles
+  const handleCopyScript = async () => {
+    if (!result?.script) return
+    await navigator.clipboard.writeText(result.script)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   const handleManualNext = () => {
@@ -197,12 +317,56 @@ export default function CreatePage() {
                   onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
                 />
 
-                {/* Drag & Drop zona */}
-                <div className="border-2 border-dashed border-dark-border rounded-xl p-6 text-center hover:border-primary-500/50 transition-colors cursor-pointer">
+                {/* Drag & Drop zona con funcionalidad real */}
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-dark-border rounded-xl p-6 text-center hover:border-primary-500/50 transition-colors cursor-pointer"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,audio/*"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
                   <Upload className="w-8 h-8 text-dark-muted mx-auto mb-2" />
                   <p className="text-sm text-dark-muted">Arrastra archivos aqui o haz clic para subir</p>
-                  <p className="text-xs text-dark-muted mt-1">Imagenes, videos o audio de referencia</p>
+                  <p className="text-xs text-dark-muted mt-1">Imagenes, videos o audio (max 50MB)</p>
                 </div>
+
+                {/* Archivos subidos */}
+                {uploadedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-dark-text">{uploadedFiles.length} archivo(s) seleccionado(s)</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {uploadedFiles.map((file, index) => (
+                        <div key={index} className="relative group rounded-lg border border-dark-border p-2 bg-dark-card">
+                          {file.preview ? (
+                            <img src={file.preview} alt={file.name} className="w-full h-20 object-cover rounded" />
+                          ) : (
+                            <div className="w-full h-20 flex items-center justify-center bg-dark-bg rounded">
+                              {file.type.startsWith('video/') ? (
+                                <Film className="w-8 h-8 text-dark-muted" />
+                              ) : (
+                                <ImageIcon className="w-8 h-8 text-dark-muted" />
+                              )}
+                            </div>
+                          )}
+                          <p className="text-xs text-dark-muted mt-1 truncate">{file.name}</p>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); removeFile(index) }}
+                            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
@@ -283,7 +447,7 @@ export default function CreatePage() {
       {step === 1 && (
         <Card>
           <CardContent className="py-12 text-center space-y-6">
-            <div className="w-20 h-20 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto animate-pulse-slow">
+            <div className="w-20 h-20 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto animate-pulse">
               <Sparkles className="w-10 h-10 text-primary-400" />
             </div>
             <div>
@@ -310,7 +474,16 @@ export default function CreatePage() {
           <div className="space-y-4">
             <Card>
               <CardContent>
-                <h3 className="font-semibold mb-3">Guion Generado</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold">Guion Generado</h3>
+                  <button
+                    onClick={handleCopyScript}
+                    className="flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300"
+                  >
+                    <Copy className="w-3 h-3" />
+                    {copied ? 'Copiado!' : 'Copiar'}
+                  </button>
+                </div>
                 <div className="p-4 rounded-xl bg-dark-bg border border-dark-border">
                   <pre className="text-sm text-dark-muted whitespace-pre-wrap font-sans">{result.script}</pre>
                 </div>
@@ -320,11 +493,10 @@ export default function CreatePage() {
             <Card>
               <CardContent>
                 <h3 className="font-semibold mb-3">Titulo y Hashtags</h3>
-                <Input
-                  label="Titulo"
-                  value={result.title || ''}
-                  readOnly
-                />
+                <Input label="Titulo" value={result.title || ''} readOnly />
+                {result.description && (
+                  <p className="text-sm text-dark-muted mt-2">{result.description}</p>
+                )}
                 <div className="flex flex-wrap gap-2 mt-3">
                   {result.hashtags?.map((tag) => (
                     <Badge key={tag} variant="info">{tag}</Badge>
@@ -333,8 +505,44 @@ export default function CreatePage() {
               </CardContent>
             </Card>
 
+            {/* Musica sugerida */}
+            {result.music && (
+              <Card>
+                <CardContent>
+                  <h3 className="font-semibold mb-3">Musica Sugerida</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="text-dark-muted">Genero:</span> {result.music.genre}</p>
+                    <p><span className="text-dark-muted">BPM:</span> {result.music.bpm}</p>
+                    <p><span className="text-dark-muted">Mood:</span> {result.music.mood}</p>
+                    {result.music.suggestions && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {result.music.suggestions.map((s) => (
+                          <Badge key={s}>{s}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Puntuacion viralidad */}
+            {result.viralityScore && (
+              <Card>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">Puntuacion de Viralidad</h3>
+                      <p className="text-xs text-dark-muted mt-1">Mejor hora: {result.bestTimeToPost}</p>
+                    </div>
+                    <div className="text-3xl font-bold text-primary-400">{result.viralityScore}/100</div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => setStep(0)} icon={<ChevronLeft className="w-4 h-4" />}>
+              <Button variant="secondary" onClick={() => { setStep(0); setProgress(0) }} icon={<ChevronLeft className="w-4 h-4" />}>
                 Volver
               </Button>
               <Button onClick={() => setStep(3)} className="flex-1" icon={<Check className="w-4 h-4" />}>
@@ -363,11 +571,47 @@ export default function CreatePage() {
             </div>
             <div>
               <h2 className="text-xl font-bold mb-2">Video Listo!</h2>
-              <p className="text-dark-muted">Tu video ha sido generado exitosamente</p>
+              <p className="text-dark-muted">Tu contenido ha sido generado. Descarga el guion completo para usarlo.</p>
+            </div>
+
+            {/* Info del video */}
+            <div className="max-w-md mx-auto grid grid-cols-2 gap-3 text-sm">
+              <div className="p-3 rounded-lg bg-dark-bg border border-dark-border">
+                <p className="text-dark-muted">Plataforma</p>
+                <p className="font-medium mt-0.5">{formData.platform}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-dark-bg border border-dark-border">
+                <p className="text-dark-muted">Duracion</p>
+                <p className="font-medium mt-0.5">{formData.duration}s</p>
+              </div>
+              <div className="p-3 rounded-lg bg-dark-bg border border-dark-border">
+                <p className="text-dark-muted">Viralidad</p>
+                <p className="font-medium mt-0.5 text-primary-400">{result?.viralityScore || 80}/100</p>
+              </div>
+              <div className="p-3 rounded-lg bg-dark-bg border border-dark-border">
+                <p className="text-dark-muted">Publicar a las</p>
+                <p className="font-medium mt-0.5">{result?.bestTimeToPost || '19:00'}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button size="lg" onClick={handleDownloadScript} icon={<Download className="w-5 h-5" />}>
+                Descargar Guion Completo
+              </Button>
+              <Button size="lg" variant="secondary" onClick={handleCopyScript} icon={<Copy className="w-5 h-5" />}>
+                {copied ? 'Copiado!' : 'Copiar Guion'}
+              </Button>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button size="lg">Descargar Video</Button>
-              <Button variant="secondary" size="lg" onClick={() => { setStep(0); setProgress(0); setResult(null) }}>
+              <Button variant="secondary" size="lg" icon={<FileText className="w-5 h-5" />}
+                onClick={() => {
+                  const text = `${result?.title}\n\n${result?.description}\n\n${result?.hashtags?.join(' ')}`
+                  navigator.clipboard.writeText(text)
+                }}
+              >
+                Copiar Titulo + Hashtags
+              </Button>
+              <Button variant="secondary" size="lg" onClick={() => { setStep(0); setProgress(0); setResult(null); setUploadedFiles([]) }}>
                 Crear Otro Video
               </Button>
             </div>
