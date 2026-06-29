@@ -119,3 +119,4 @@ npm run lint     # Linting
 ## Licencia
 
 Copyright 2025 AutoReel AI. Todos los derechos reservados.
+
