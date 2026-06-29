@@ -141,13 +141,13 @@ export default function CreatePage() {
     // Simular progreso
     const interval = setInterval(() => {
       setProgress((prev) => {
-        if (prev >= 95) {
+        if (prev >= 90) {
           clearInterval(interval)
-          return 95
+          return 90
         }
-        return prev + Math.random() * 15
+        return prev + Math.random() * 10
       })
-    }, 500)
+    }, 300)
 
     try {
       const res = await fetch('/api/ai/one-click', {
@@ -184,7 +184,8 @@ export default function CreatePage() {
     clearInterval(interval)
     setProgress(100)
     setGenerating(false)
-    setTimeout(() => setStep(2), 500)
+    // Esperar un momento para que se vea el 100% y luego mostrar resultados
+    setTimeout(() => setStep(2), 1500)
   }
 
   // Descargar guion como archivo
