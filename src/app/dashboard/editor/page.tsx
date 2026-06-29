@@ -104,11 +104,11 @@ export default function EditorPage() {
     setDownloadReady(false)
     setDownloadUrl('')
 
-    const W = 1080
-    const H = 1920
-    const FPS = 20
+    const W = 720
+    const H = 1280
+    const FPS = 10
     const framesPerPhoto = secPerPhoto * FPS
-    const fadeFrames = Math.min(10, Math.floor(framesPerPhoto / 4))
+    const fadeFrames = Math.min(5, Math.floor(framesPerPhoto / 4))
     const totalFrames = photos.length * framesPerPhoto
 
     // Canvas para renderizar
@@ -199,8 +199,8 @@ export default function EditorPage() {
           const done = ((i * framesPerPhoto + f + 1) / totalFrames) * 100
           setExportPct(Math.round(done))
 
-          // Esperar al siguiente frame
-          await new Promise<void>((r) => setTimeout(r, 1000 / FPS))
+          // Esperar al siguiente frame — MAS LENTO para que MediaRecorder capture bien
+          await new Promise<void>((r) => setTimeout(r, 50)) // 50ms = 20fps real
         }
       }
 
