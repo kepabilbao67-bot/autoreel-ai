@@ -230,9 +230,22 @@ export default function EditorPage() {
     const ctx = canvas.getContext('2d')!
 
     const stream = canvas.captureStream(fps)
+    
+    // Detectar codec soportado
+    let mimeType = 'video/webm'
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+      mimeType = 'video/webm;codecs=vp9'
+    } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+      mimeType = 'video/webm;codecs=vp8'
+    } else if (MediaRecorder.isTypeSupported('video/webm')) {
+      mimeType = 'video/webm'
+    } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+      mimeType = 'video/mp4'
+    }
+
     const mediaRecorder = new MediaRecorder(stream, {
-      mimeType: 'video/webm;codecs=vp9',
-      videoBitsPerSecond: 8000000,
+      mimeType,
+      videoBitsPerSecond: 5000000,
     })
 
     const chunks: Blob[] = []
@@ -280,8 +293,8 @@ export default function EditorPage() {
         frameCount++
         setExportProgress(Math.round((frameCount / totalFrames) * 100))
 
-        // Wait for next frame timing
-        await new Promise((resolve) => requestAnimationFrame(resolve))
+        // Wait for next frame
+        await new Promise((resolve) => setTimeout(resolve, 1000 / fps))
       }
     }
 
@@ -290,6 +303,16 @@ export default function EditorPage() {
     setExportedBlob(blob)
     setIsExporting(false)
     setExportProgress(100)
+
+    // Descargar automaticamente
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `video-autoreel-${Date.now()}.webm`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   // Download exported video
