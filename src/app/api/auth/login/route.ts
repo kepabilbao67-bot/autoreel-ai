@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseAdmin } from '@/lib/supabase'
 import { LoginSchema } from '@/lib/validators'
 
 // POST - Inicio de sesion con email y contrasena
@@ -15,6 +14,23 @@ export async function POST(request: Request) {
       )
     }
 
+    // Modo demo: si no hay Supabase configurado, permitir acceso con cualquier email/password
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!supabaseUrl || supabaseUrl === 'https://your-project.supabase.co') {
+      // Modo demo - simular login exitoso
+      return NextResponse.json({
+        user: {
+          id: 'demo-user-001',
+          email: parsed.data.email,
+          full_name: 'Usuario Demo',
+        },
+        session: { access_token: 'demo-token', expires_at: Date.now() + 86400000 },
+        demo: true,
+      })
+    }
+
+    // Modo produccion con Supabase
+    const { createSupabaseAdmin } = await import('@/lib/supabase')
     const supabase = createSupabaseAdmin()
     const { data, error } = await supabase.auth.signInWithPassword({
       email: parsed.data.email,
