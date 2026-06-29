@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseAdmin } from '@/lib/supabase'
 
-// POST - Subir archivos a Supabase Storage
+// POST - Subir archivos (modo demo: simula el upload)
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null
-    const userId = formData.get('userId') as string | null
 
-    if (!file || !userId) {
+    if (!file) {
       return NextResponse.json(
-        { error: 'Se requiere archivo y userId' },
+        { error: 'Se requiere un archivo' },
         { status: 400 }
       )
     }
@@ -27,40 +25,45 @@ export async function POST(request: Request) {
     const allowedTypes = ['image/', 'video/', 'audio/']
     if (!allowedTypes.some((t) => file.type.startsWith(t))) {
       return NextResponse.json(
-        { error: 'Tipo de archivo no permitido' },
+        { error: 'Tipo de archivo no permitido (solo imagenes, video o audio)' },
         { status: 400 }
       )
     }
 
+    // Verificar si Supabase esta configurado
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (!supabaseUrl || supabaseUrl === 'https://your-project.supabase.co') {
+      // Modo demo: simular upload exitoso
+      const fakeUrl = `/uploads/${Date.now()}-${file.name}`
+      return NextResponse.json({
+        url: fakeUrl,
+        path: fakeUrl,
+        filename: file.name,
+        size: file.size,
+        type: file.type,
+        demo: true,
+      })
+    }
+
+    // Modo produccion con Supabase
+    const { createSupabaseAdmin } = await import('@/lib/supabase')
     const supabase = createSupabaseAdmin()
 
-    // Generar nombre unico
+    const userId = formData.get('userId') as string || 'demo-user'
     const ext = file.name.split('.').pop()
     const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 
     const { data, error } = await supabase.storage
       .from('assets')
-      .upload(fileName, file, {
-        contentType: file.type,
-      })
+      .upload(fileName, file, { contentType: file.type })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Obtener URL publica
     const { data: { publicUrl } } = supabase.storage
       .from('assets')
       .getPublicUrl(data.path)
-
-    // Guardar en la tabla assets
-    await supabase.from('assets').insert({
-      user_id: userId,
-      type: file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : 'audio',
-      url: publicUrl,
-      filename: file.name,
-      size: file.size,
-    })
 
     return NextResponse.json({ url: publicUrl, path: data.path })
   } catch (error) {
