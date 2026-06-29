@@ -15,13 +15,16 @@ import {
   X,
   Crown,
   Layout,
+  CalendarClock,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
+import { NotificationBell } from '@/components/shared/NotificationBell'
 
 // Layout del dashboard con sidebar
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/create', label: 'Crear Video', icon: PlusCircle },
+  { href: '/dashboard/scheduler', label: 'Scheduler', icon: CalendarClock },
   { href: '/dashboard/videos', label: 'Mis Videos', icon: Video },
   { href: '/dashboard/templates', label: 'Plantillas', icon: Layout },
   { href: '/dashboard/analytics', label: 'Analiticas', icon: BarChart3 },
@@ -160,7 +163,7 @@ export default function DashboardLayout({
               </div>
               <span className="font-bold gradient-text">AutoReel AI</span>
             </div>
-            <div className="w-6" /> {/* Spacer */}
+            <NotificationBell />
           </div>
         </div>
 
