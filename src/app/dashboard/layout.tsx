@@ -16,6 +16,7 @@ import {
   Crown,
   Layout,
   CalendarClock,
+  Film,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { NotificationBell } from '@/components/shared/NotificationBell'
@@ -25,6 +26,7 @@ import { AIChatbot } from '@/components/chat/AIChatbot'
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/create', label: 'Crear Video', icon: PlusCircle },
+  { href: '/dashboard/editor', label: 'Editor Video', icon: Film },
   { href: '/dashboard/scheduler', label: 'Scheduler', icon: CalendarClock },
   { href: '/dashboard/videos', label: 'Mis Videos', icon: Video },
   { href: '/dashboard/templates', label: 'Plantillas', icon: Layout },
