@@ -1,19 +1,31 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 
 // Middleware para proteger rutas del dashboard
+// Si Supabase no esta configurado, permite el acceso (modo demo)
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },
   })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  // Si no hay variables de Supabase configuradas, modo demo (permite todo)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseKey || supabaseUrl === 'https://your-project.supabase.co') {
+    // Modo demo: permitir acceso a todo sin autenticacion
+    return response
+  }
+
+  // Si Supabase esta configurado, verificar autenticacion
+  try {
+    const { createServerClient } = await import('@supabase/ssr')
+
+    let authResponse = response
+
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -22,32 +34,35 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
-          response = NextResponse.next({
+          authResponse = NextResponse.next({
             request: {
               headers: request.headers,
             },
           })
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            authResponse.cookies.set(name, value, options)
           )
         },
       },
+    })
+
+    const { data: { session } } = await supabase.auth.getSession()
+
+    // Proteger rutas del dashboard
+    if (request.nextUrl.pathname.startsWith('/dashboard') && !session) {
+      return NextResponse.redirect(new URL('/login', request.url))
     }
-  )
 
-  const { data: { session } } = await supabase.auth.getSession()
+    // Redirigir al dashboard si ya esta autenticado
+    if ((request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') && session) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
 
-  // Proteger rutas del dashboard
-  if (request.nextUrl.pathname.startsWith('/dashboard') && !session) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return authResponse
+  } catch {
+    // Si hay cualquier error con Supabase, permitir acceso (modo demo)
+    return response
   }
-
-  // Redirigir al dashboard si ya esta autenticado y va a login/register
-  if ((request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register') && session) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  return response
 }
 
 export const config = {
