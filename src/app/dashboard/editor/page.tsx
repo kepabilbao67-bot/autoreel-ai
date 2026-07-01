@@ -2,24 +2,14 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import {
-  Upload,
-  Music,
-  Play,
-  Pause,
-  Download,
-  Plus,
-  Check,
-  X,
-  Film,
-  RotateCcw,
-  Loader2,
-  AlertCircle,
+  Upload, Music, Play, Pause, Download, Plus, Check, X,
+  Film, RotateCcw, Loader2, AlertCircle, Image as ImageIcon,
 } from 'lucide-react'
 
 // ============================================================
 // EDITOR DE VIDEO - AutoReel AI
-// Crea videos REALES desde fotos + texto
-// Usa un canvas VISIBLE para que captureStream funcione
+// Genera video REAL (WebM) en el navegador
+// El canvas DEBE estar en el DOM y visible para que funcione
 // ============================================================
 
 interface Photo {
@@ -46,9 +36,9 @@ export default function EditorPage() {
 
   const fileRef = useRef<HTMLInputElement>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const exportCanvasRef = useRef<HTMLCanvasElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // Subir fotos
+  // ---- SUBIR FOTOS ----
   const addPhotos = (files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
       if (!file.type.startsWith('image/')) return
@@ -77,7 +67,7 @@ export default function EditorPage() {
     setPhotos((prev) => prev.filter((p) => p.id !== id))
   }
 
-  // Preview playback
+  // ---- PREVIEW PLAYBACK ----
   useEffect(() => {
     if (playing && photos.length > 1) {
       timerRef.current = setInterval(() => {
@@ -90,9 +80,55 @@ export default function EditorPage() {
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [playing, photos.length, secPerPhoto])
 
-  // ========== EXPORTAR VIDEO ==========
+  // ---- DIBUJAR EN CANVAS (para preview en tiempo real) ----
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas || photos.length === 0) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const photo = photos[Math.min(currentIdx, photos.length - 1)]
+    if (!photo) return
+
+    const img = new Image()
+    img.onload = () => {
+      const W = canvas.width
+      const H = canvas.height
+
+      // Fondo negro
+      ctx.fillStyle = '#000'
+      ctx.fillRect(0, 0, W, H)
+
+      // Dibujar imagen cover
+      const ir = img.naturalWidth / img.naturalHeight
+      const cr = W / H
+      let dw: number, dh: number, dx: number, dy: number
+      if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0 }
+      else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2 }
+      ctx.drawImage(img, dx, dy, dw, dh)
+
+      // Texto
+      if (text) {
+        const sz = textSize === 1 ? 28 : textSize === 2 ? 44 : 64
+        ctx.font = `bold ${sz}px Arial`
+        ctx.textAlign = 'center'
+        const y = textPos === 'top' ? H * 0.12 : textPos === 'center' ? H * 0.5 : H * 0.88
+        ctx.strokeStyle = 'black'
+        ctx.lineWidth = 4
+        ctx.strokeText(text, W / 2, y, W - 20)
+        ctx.fillStyle = 'white'
+        ctx.fillText(text, W / 2, y, W - 20)
+      }
+    }
+    img.src = photo.src
+  }, [currentIdx, photos, text, textPos, textSize])
+
+  // ---- EXPORTAR VIDEO ----
   const exportVideo = async () => {
     if (photos.length === 0) return
+
+    const canvas = canvasRef.current
+    if (!canvas) { setError('Error: canvas no disponible'); return }
 
     setExporting(true)
     setExportPct(0)
@@ -102,44 +138,51 @@ export default function EditorPage() {
     setStatusMsg('Preparando...')
 
     try {
-      // Usar el canvas que esta EN el DOM (visible)
-      const canvas = exportCanvasRef.current
-      if (!canvas) throw new Error('Canvas no encontrado')
-      
       const ctx = canvas.getContext('2d')
-      if (!ctx) throw new Error('No se pudo crear contexto 2D')
+      if (!ctx) throw new Error('No se pudo obtener contexto del canvas')
 
       const W = canvas.width
       const H = canvas.height
 
-      // Cargar imagenes
+      // Cargar todas las imagenes primero
       setStatusMsg('Cargando imagenes...')
       const images: HTMLImageElement[] = []
       for (const photo of photos) {
         const img = await new Promise<HTMLImageElement>((resolve, reject) => {
           const i = new Image()
           i.onload = () => resolve(i)
-          i.onerror = () => reject(new Error(`No se pudo cargar: ${photo.name}`))
+          i.onerror = () => reject(new Error('No se pudo cargar imagen'))
           i.src = photo.src
         })
         images.push(img)
       }
 
-      // Verificar MediaRecorder
+      // Configurar MediaRecorder con el canvas que esta EN el DOM
       setStatusMsg('Iniciando grabacion...')
-      const stream = canvas.captureStream(10)
-      
+      const stream = canvas.captureStream(15) // 15 fps
+
+      // Encontrar mime soportado
       let mime = ''
-      for (const m of ['video/webm;codecs=vp8', 'video/webm', 'video/mp4']) {
-        if (MediaRecorder.isTypeSupported(m)) { mime = m; break }
+      const mimes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4']
+      for (const m of mimes) {
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) {
+          mime = m
+          break
+        }
       }
-      if (!mime) throw new Error('Tu navegador no soporta crear videos. Usa Google Chrome.')
+      if (!mime) throw new Error('Tu navegador no soporta grabar video. Usa Google Chrome por favor.')
 
       const recorder = new MediaRecorder(stream, { mimeType: mime })
       const chunks: Blob[] = []
-      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
 
-      const blobPromise = new Promise<Blob>((resolve) => {
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data)
+        }
+      }
+
+      // Promesa que se resuelve cuando para de grabar
+      const recordingDone = new Promise<Blob>((resolve) => {
         recorder.onstop = () => {
           const blob = new Blob(chunks, { type: mime })
           resolve(blob)
@@ -147,88 +190,91 @@ export default function EditorPage() {
       })
 
       // EMPEZAR A GRABAR
-      recorder.start()
+      recorder.start(100) // pedir datos cada 100ms
       setStatusMsg('Grabando video...')
 
-      // Funciones de dibujo
-      const drawImage = (img: HTMLImageElement) => {
-        const ir = img.naturalWidth / img.naturalHeight
-        const cr = W / H
-        let dw: number, dh: number, dx: number, dy: number
-        if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0 }
-        else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2 }
-        ctx.drawImage(img, dx, dy, dw, dh)
-      }
+      // Esperar un poco para que el recorder se inicialice
+      await new Promise(r => setTimeout(r, 200))
 
-      const drawText = () => {
-        if (!text) return
-        const sz = textSize === 1 ? 36 : textSize === 2 ? 56 : 80
-        ctx.font = `bold ${sz}px Arial`
-        ctx.textAlign = 'center'
-        const y = textPos === 'top' ? H * 0.12 : textPos === 'center' ? H * 0.5 : H * 0.88
-        ctx.strokeStyle = 'black'
-        ctx.lineWidth = 6
-        ctx.strokeText(text, W / 2, y, W - 40)
-        ctx.fillStyle = 'white'
-        ctx.fillText(text, W / 2, y, W - 40)
-      }
-
-      // Renderizar cada foto por X segundos (usando intervalos reales de tiempo)
-      const msPerPhoto = secPerPhoto * 1000
-      const frameInterval = 100 // dibujar cada 100ms (10fps)
-
+      // Dibujar cada foto durante X segundos EN TIEMPO REAL
       for (let i = 0; i < images.length; i++) {
+        const img = images[i]
         const startTime = Date.now()
-        
-        // Dibujar esta foto durante secPerPhoto segundos
-        while (Date.now() - startTime < msPerPhoto) {
+        const duration = secPerPhoto * 1000 // duracion en ms
+
+        // Dibujar esta foto repetidamente durante su duracion
+        while (Date.now() - startTime < duration) {
+          // Limpiar
           ctx.fillStyle = '#000'
           ctx.fillRect(0, 0, W, H)
-          drawImage(images[i])
-          drawText()
-          
-          // Actualizar progreso
-          const elapsed = (i * msPerPhoto) + (Date.now() - startTime)
-          const total = images.length * msPerPhoto
-          setExportPct(Math.min(99, Math.round((elapsed / total) * 100)))
 
-          // Esperar al siguiente frame
-          await new Promise(r => setTimeout(r, frameInterval))
+          // Dibujar imagen
+          const ir = img.naturalWidth / img.naturalHeight
+          const cr = W / H
+          let dw: number, dh: number, dx: number, dy: number
+          if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0 }
+          else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2 }
+          ctx.drawImage(img, dx, dy, dw, dh)
+
+          // Texto
+          if (text) {
+            const sz = textSize === 1 ? 28 : textSize === 2 ? 44 : 64
+            ctx.font = `bold ${sz}px Arial`
+            ctx.textAlign = 'center'
+            const y = textPos === 'top' ? H * 0.12 : textPos === 'center' ? H * 0.5 : H * 0.88
+            ctx.strokeStyle = 'black'
+            ctx.lineWidth = 4
+            ctx.strokeText(text, W / 2, y, W - 20)
+            ctx.fillStyle = 'white'
+            ctx.fillText(text, W / 2, y, W - 20)
+          }
+
+          // Actualizar progreso
+          const totalMs = photos.length * duration
+          const elapsedMs = i * duration + (Date.now() - startTime)
+          setExportPct(Math.min(99, Math.round((elapsedMs / totalMs) * 100)))
+
+          // Esperar 66ms (~15fps)
+          await new Promise(r => setTimeout(r, 66))
         }
       }
 
-      // Parar grabacion
+      // Esperar un frame mas para asegurar que el ultimo frame se graba
+      await new Promise(r => setTimeout(r, 300))
+
+      // PARAR GRABACION
       setStatusMsg('Finalizando...')
       recorder.stop()
 
-      // Esperar el blob
-      const blob = await blobPromise
+      // Esperar a que el blob este listo
+      const videoBlob = await recordingDone
 
-      if (blob.size < 1000) {
-        throw new Error(`El video generado esta vacio (${blob.size} bytes). Intenta con Chrome.`)
+      // Verificar que tiene contenido
+      if (videoBlob.size < 500) {
+        throw new Error(`El video esta vacio (${videoBlob.size} bytes). Intenta de nuevo o usa Chrome.`)
       }
 
-      // Crear URL y descargar
-      const url = URL.createObjectURL(blob)
+      // Crear URL y marcar como listo
+      const url = URL.createObjectURL(videoBlob)
       setDownloadUrl(url)
       setDownloadReady(true)
-      setExporting(false)
       setExportPct(100)
-      setStatusMsg(`Video creado (${(blob.size / 1024 / 1024).toFixed(1)} MB)`)
+      setStatusMsg(`Video creado! (${(videoBlob.size / 1024 / 1024).toFixed(1)} MB)`)
 
       // Auto descargar
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `autoreel-video-${Date.now()}.webm`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `autoreel-video-${Date.now()}.webm`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
 
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error desconocido'
-      setError(`Error: ${msg}`)
-      setExporting(false)
+      setError(msg)
       setStatusMsg('')
+    } finally {
+      setExporting(false)
     }
   }
 
@@ -251,7 +297,7 @@ export default function EditorPage() {
           {downloadReady && (
             <a href={downloadUrl} download="autoreel-video.webm"
               className="flex items-center gap-1.5 px-4 py-2 bg-green-500 hover:bg-green-400 text-white rounded-lg text-sm font-medium">
-              <Download className="w-4 h-4" /> Descargar Video
+              <Download className="w-4 h-4" /> Descargar
             </a>
           )}
           {!exporting && !downloadReady && photos.length > 0 && (
@@ -277,49 +323,43 @@ export default function EditorPage() {
       )}
 
       {/* EXPORT PROGRESS */}
-      {exporting && (
-        <div className="flex-shrink-0 bg-primary-500/10 border border-primary-500/30 rounded-xl p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <Loader2 className="w-4 h-4 text-primary-400 animate-spin" />
-            <span className="text-sm text-primary-300 font-medium">{statusMsg} {exportPct}%</span>
+      {(exporting || (downloadReady && statusMsg)) && (
+        <div className={`flex-shrink-0 border rounded-xl p-3 ${downloadReady ? 'bg-green-500/10 border-green-500/30' : 'bg-primary-500/10 border-primary-500/30'}`}>
+          <div className="flex items-center gap-2">
+            {exporting ? <Loader2 className="w-4 h-4 text-primary-400 animate-spin" /> : <Check className="w-4 h-4 text-green-400" />}
+            <span className={`text-sm font-medium ${downloadReady ? 'text-green-400' : 'text-primary-300'}`}>{statusMsg} {exporting ? `${exportPct}%` : ''}</span>
           </div>
-          <div className="w-full h-2.5 bg-dark-bg rounded-full overflow-hidden">
-            <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${exportPct}%` }} />
-          </div>
-        </div>
-      )}
-
-      {/* STATUS MSG cuando termina */}
-      {statusMsg && !exporting && downloadReady && (
-        <div className="flex-shrink-0 bg-green-500/10 border border-green-500/30 rounded-lg p-3 text-sm text-green-400 flex items-center gap-2">
-          <Check className="w-4 h-4" />
-          <span>{statusMsg} - El video se descargo automaticamente.</span>
+          {exporting && (
+            <div className="w-full h-2 bg-dark-bg rounded-full overflow-hidden mt-2">
+              <div className="h-full bg-primary-500 rounded-full transition-all" style={{ width: `${exportPct}%` }} />
+            </div>
+          )}
         </div>
       )}
 
       {/* MAIN AREA */}
       <div className="flex-1 flex flex-col lg:flex-row gap-2 min-h-0 overflow-hidden">
-        {/* LEFT PANEL */}
-        <div className="w-full lg:w-56 flex-shrink-0 bg-dark-card border border-dark-border rounded-xl p-3 overflow-y-auto space-y-4">
+        {/* PANEL IZQUIERDO */}
+        <div className="w-full lg:w-52 flex-shrink-0 bg-dark-card border border-dark-border rounded-xl p-3 overflow-y-auto space-y-3">
           <div>
-            <p className="text-[11px] font-bold text-dark-muted uppercase mb-2">① Fotos</p>
+            <p className="text-[11px] font-bold text-dark-muted uppercase mb-1">① Fotos</p>
             <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}
               onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-dark-border rounded-xl p-4 text-center cursor-pointer hover:border-primary-500/50">
+              className="border-2 border-dashed border-dark-border rounded-xl p-3 text-center cursor-pointer hover:border-primary-500/50">
               <Upload className="w-5 h-5 text-primary-400 mx-auto mb-1" />
-              <p className="text-[11px] text-dark-muted">Clic o arrastra fotos</p>
+              <p className="text-[10px] text-dark-muted">Clic o arrastra fotos</p>
             </div>
             <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileChange} />
           </div>
 
           <div>
-            <p className="text-[11px] font-bold text-dark-muted uppercase mb-2">② Texto</p>
+            <p className="text-[11px] font-bold text-dark-muted uppercase mb-1">② Texto</p>
             <input type="text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Texto del video..."
-              className="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm text-white placeholder:text-dark-muted focus:outline-none focus:border-primary-500" />
-            <div className="flex gap-1 mt-2">
+              className="w-full px-2 py-1.5 bg-dark-bg border border-dark-border rounded-lg text-xs text-white placeholder:text-dark-muted focus:outline-none focus:border-primary-500" />
+            <div className="flex gap-1 mt-1.5">
               {(['top', 'center', 'bottom'] as const).map((p) => (
                 <button key={p} onClick={() => setTextPos(p)}
-                  className={`flex-1 text-[10px] py-1 rounded ${textPos === p ? 'bg-primary-500 text-white' : 'bg-dark-bg text-dark-muted'}`}>
+                  className={`flex-1 text-[9px] py-1 rounded ${textPos === p ? 'bg-primary-500 text-white' : 'bg-dark-bg text-dark-muted'}`}>
                   {p === 'top' ? 'Arriba' : p === 'center' ? 'Centro' : 'Abajo'}
                 </button>
               ))}
@@ -327,21 +367,21 @@ export default function EditorPage() {
             <div className="flex gap-1 mt-1">
               {[1, 2, 3].map((s) => (
                 <button key={s} onClick={() => setTextSize(s)}
-                  className={`flex-1 text-[10px] py-1 rounded ${textSize === s ? 'bg-primary-500 text-white' : 'bg-dark-bg text-dark-muted'}`}>
-                  {s === 1 ? 'Pequeño' : s === 2 ? 'Mediano' : 'Grande'}
+                  className={`flex-1 text-[9px] py-1 rounded ${textSize === s ? 'bg-primary-500 text-white' : 'bg-dark-bg text-dark-muted'}`}>
+                  {s === 1 ? 'S' : s === 2 ? 'M' : 'L'}
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <p className="text-[11px] font-bold text-dark-muted uppercase mb-2">③ Musica</p>
-            {['⚡ Energetico', '🌊 Calmado', '🔥 Epico', '🎉 Divertido'].map((m) => (
+            <p className="text-[11px] font-bold text-dark-muted uppercase mb-1">③ Musica</p>
+            {['⚡Energetico', '🌊Calmado', '🔥Epico', '🎉Divertido'].map((m) => (
               <button key={m} onClick={() => setMusicStyle(musicStyle === m ? '' : m)}
-                className={`w-full text-left text-xs px-3 py-1.5 rounded-lg mb-1 ${
+                className={`w-full text-left text-[11px] px-2 py-1.5 rounded mb-0.5 ${
                   musicStyle === m ? 'bg-primary-500/20 text-primary-400' : 'text-dark-muted hover:text-white'
                 }`}>
-                {m} {musicStyle === m && <Check className="w-3 h-3 inline ml-1" />}
+                {m} {musicStyle === m && <Check className="w-3 h-3 inline" />}
               </button>
             ))}
           </div>
@@ -353,50 +393,55 @@ export default function EditorPage() {
           </div>
         </div>
 
-        {/* PREVIEW + CANVAS DE EXPORTACION */}
-        <div className="flex-1 flex items-center justify-center min-h-[300px] relative">
-          {/* Canvas REAL para exportar (visible pero pequeño durante export, oculto normalmente) */}
-          <canvas
-            ref={exportCanvasRef}
-            width={720}
-            height={1280}
-            className={`absolute rounded-2xl border-2 border-primary-500 ${
-              exporting ? 'w-[200px] aspect-[9/16] top-2 right-2 z-20 opacity-90' : 'w-0 h-0 opacity-0'
-            }`}
-          />
+        {/* PREVIEW - CANVAS REAL (visible y funcional) */}
+        <div className="flex-1 flex items-center justify-center min-h-[300px]">
+          <div className="relative">
+            {/* Este canvas ES el video. Esta en el DOM y visible = captureStream funciona */}
+            <canvas
+              ref={canvasRef}
+              width={360}
+              height={640}
+              className="rounded-2xl border-2 border-dark-border shadow-2xl bg-black max-h-[60vh] w-auto"
+            />
 
-          {/* Preview normal */}
-          <div className="relative w-full max-w-[280px] aspect-[9/16] bg-black rounded-2xl overflow-hidden border-2 border-dark-border shadow-2xl">
-            {photos.length > 0 ? (
-              <>
-                <img src={photos[Math.min(currentIdx, photos.length - 1)]?.src} alt=""
-                  className="absolute inset-0 w-full h-full object-cover transition-all duration-700" />
-                {text && (
-                  <div className={`absolute left-0 right-0 px-3 flex justify-center ${
-                    textPos === 'top' ? 'top-[8%]' : textPos === 'center' ? 'top-1/2 -translate-y-1/2' : 'bottom-[8%]'
-                  }`}>
-                    <span className={`font-bold text-white text-center drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] ${
-                      textSize === 1 ? 'text-sm' : textSize === 2 ? 'text-xl' : 'text-3xl'
-                    }`}>{text}</span>
-                  </div>
-                )}
-                {musicStyle && (
-                  <div className="absolute top-2 right-2 bg-black/50 rounded-full px-2 py-0.5 flex items-center gap-1">
-                    <Music className="w-3 h-3 text-white" /><span className="text-[9px] text-white">{musicStyle}</span>
-                  </div>
-                )}
-                <button onClick={() => { if (photos.length > 1) { if (!playing && currentIdx >= photos.length - 1) setCurrentIdx(0); setPlaying(!playing) } }}
-                  className="absolute bottom-3 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white/25 backdrop-blur flex items-center justify-center">
-                  {playing ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
-                </button>
-                <div className="absolute top-2 left-2 bg-black/50 rounded-full px-2 py-0.5">
-                  <span className="text-[9px] text-white">{currentIdx + 1}/{photos.length}</span>
-                </div>
-              </>
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
-                <Upload className="w-10 h-10 text-dark-muted mb-2" />
+            {/* Overlay cuando no hay fotos */}
+            {photos.length === 0 && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center rounded-2xl">
+                <ImageIcon className="w-10 h-10 text-dark-muted mb-2" />
                 <p className="text-sm text-dark-muted">Sube fotos para empezar</p>
+              </div>
+            )}
+
+            {/* Musica badge */}
+            {musicStyle && photos.length > 0 && (
+              <div className="absolute top-2 right-2 bg-black/60 rounded-full px-2 py-0.5 flex items-center gap-1">
+                <Music className="w-3 h-3 text-white" /><span className="text-[9px] text-white">{musicStyle}</span>
+              </div>
+            )}
+
+            {/* Play/Pause */}
+            {photos.length > 1 && !exporting && (
+              <button
+                onClick={() => { if (!playing && currentIdx >= photos.length - 1) setCurrentIdx(0); setPlaying(!playing) }}
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 w-10 h-10 rounded-full bg-white/25 backdrop-blur flex items-center justify-center hover:bg-white/40">
+                {playing ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white ml-0.5" />}
+              </button>
+            )}
+
+            {/* Counter */}
+            {photos.length > 0 && (
+              <div className="absolute top-2 left-2 bg-black/60 rounded-full px-2 py-0.5">
+                <span className="text-[9px] text-white">{currentIdx + 1}/{photos.length}</span>
+              </div>
+            )}
+
+            {/* Exporting indicator */}
+            {exporting && (
+              <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
+                <div className="bg-black/80 rounded-xl px-4 py-3 text-center">
+                  <Loader2 className="w-6 h-6 text-primary-400 animate-spin mx-auto mb-1" />
+                  <p className="text-xs text-white">Grabando...</p>
+                </div>
               </div>
             )}
           </div>
@@ -404,28 +449,28 @@ export default function EditorPage() {
       </div>
 
       {/* TIMELINE */}
-      <div className="flex-shrink-0 bg-dark-card border border-dark-border rounded-xl p-2.5 overflow-x-auto">
+      <div className="flex-shrink-0 bg-dark-card border border-dark-border rounded-xl p-2 overflow-x-auto">
         {photos.length > 0 ? (
           <div className="flex gap-1.5 items-center">
             {photos.map((p, i) => (
               <div key={p.id} onClick={() => { setCurrentIdx(i); setPlaying(false) }}
-                className={`relative flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
+                className={`relative flex-shrink-0 w-11 h-11 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
                   i === currentIdx ? 'border-primary-500 scale-110' : 'border-transparent hover:border-white/30'
                 }`}>
                 <img src={p.src} alt="" className="w-full h-full object-cover" />
                 <button onClick={(e) => { e.stopPropagation(); removePhoto(p.id) }}
-                  className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center">
+                  className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">
                   <X className="w-2 h-2 text-white" />
                 </button>
               </div>
             ))}
             <button onClick={() => fileRef.current?.click()}
-              className="flex-shrink-0 w-12 h-12 rounded-lg border-2 border-dashed border-dark-border flex items-center justify-center hover:border-primary-500/50">
-              <Plus className="w-4 h-4 text-dark-muted" />
+              className="flex-shrink-0 w-11 h-11 rounded-lg border-2 border-dashed border-dark-border flex items-center justify-center hover:border-primary-500/50">
+              <Plus className="w-3 h-3 text-dark-muted" />
             </button>
           </div>
         ) : (
-          <p className="text-center text-[11px] text-dark-muted py-1">Sube fotos y apareceran aqui</p>
+          <p className="text-center text-[10px] text-dark-muted py-1">Sube fotos y apareceran aqui</p>
         )}
       </div>
     </div>
