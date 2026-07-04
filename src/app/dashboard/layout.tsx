@@ -16,8 +16,12 @@ import {
   Crown,
   Layout,
   CalendarClock,
+  CalendarDays,
   Film,
   Music,
+  Image as ImageIcon,
+  History,
+  Users,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { NotificationBell } from '@/components/shared/NotificationBell'
@@ -34,6 +38,11 @@ const navItems = [
   { href: '/dashboard/videos', label: 'Mis Videos', icon: Video },
   { href: '/dashboard/templates', label: 'Plantillas', icon: Layout },
   { href: '/dashboard/music', label: 'Musica', icon: Music },
+  { href: '/dashboard/thumbnails', label: 'Thumbnails', icon: ImageIcon },
+  { href: '/dashboard/history', label: 'Historial', icon: History },
+  { href: '/dashboard/calendar', label: 'Calendario', icon: CalendarDays },
+  { href: '/dashboard/competitors', label: 'Competidores', icon: Users },
+  { href: '/dashboard/images', label: 'Imagenes', icon: ImageIcon },
   { href: '/dashboard/analytics', label: 'Analiticas', icon: BarChart3 },
   { href: '/dashboard/settings', label: 'Configuracion', icon: Settings },
 ]

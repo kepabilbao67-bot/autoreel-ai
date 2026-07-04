@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/Badge'
 import { VideoPreview } from '@/components/video/VideoPreview'
 import { TemplateSelector } from '@/components/video/TemplateSelector'
 import { ShareButtons } from '@/components/shared/ShareButtons'
+import { useVideoHistory } from '@/hooks/useVideoHistory'
 
 // Pagina de creacion de video con 4 pasos
 const platforms = [
@@ -74,6 +75,7 @@ export default function CreatePage() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { addVideo } = useVideoHistory()
   const [formData, setFormData] = useState({
     topic: '',
     platform: 'tiktok',
@@ -248,6 +250,25 @@ Generado con AutoReel AI - autoreel-ai.vercel.app
     } else {
       setStep((prev) => Math.min(prev + 1, 3))
     }
+  }
+
+  const handleConfirmExport = () => {
+    // Auto-save to video history
+    if (result) {
+      addVideo({
+        title: result.title || formData.topic,
+        topic: formData.topic,
+        platform: formData.platform,
+        language: formData.language,
+        style: formData.style,
+        duration: formData.duration,
+        script: result.script || '',
+        hashtags: result.hashtags || [],
+        viralityScore: result.viralityScore || 0,
+        templateId: formData.template || '',
+      })
+    }
+    setStep(3)
   }
 
   return (
@@ -547,7 +568,7 @@ Generado con AutoReel AI - autoreel-ai.vercel.app
               <Button variant="secondary" onClick={() => { setStep(0); setProgress(0) }} icon={<ChevronLeft className="w-4 h-4" />}>
                 Volver
               </Button>
-              <Button onClick={() => setStep(3)} className="flex-1" icon={<Check className="w-4 h-4" />}>
+              <Button onClick={handleConfirmExport} className="flex-1" icon={<Check className="w-4 h-4" />}>
                 Confirmar y Exportar
               </Button>
             </div>
