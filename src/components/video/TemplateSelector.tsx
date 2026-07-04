@@ -21,6 +21,13 @@ const templates: Template[] = [
   { id: '6', name: 'Noticias', category: 'news', description: 'Breaking news style', color: 'from-indigo-500 to-blue-500' },
   { id: '7', name: 'Story Time', category: 'entertainment', description: 'Narracion de historias', color: 'from-violet-500 to-purple-500' },
   { id: '8', name: 'Review', category: 'marketing', description: 'Resenas de productos', color: 'from-amber-500 to-yellow-500' },
+  { id: '9', name: 'Viajes', category: 'viajes', description: 'Destinos increibles', color: 'from-sky-500 to-blue-600' },
+  { id: '10', name: 'Negocios', category: 'negocios', description: 'Pitch y presentaciones', color: 'from-slate-500 to-gray-700' },
+  { id: '11', name: 'Tecnologia', category: 'tecnologia', description: 'Unboxing y reviews tech', color: 'from-cyan-500 to-blue-500' },
+  { id: '12', name: 'Moda', category: 'moda', description: 'Outfits y tendencias', color: 'from-rose-500 to-pink-600' },
+  { id: '13', name: 'Gaming', category: 'gaming', description: 'Highlights de gameplay', color: 'from-violet-500 to-fuchsia-500' },
+  { id: '14', name: 'Mascotas', category: 'mascotas', description: 'Contenido adorable', color: 'from-amber-400 to-orange-500' },
+  { id: '15', name: 'Comedia', category: 'entertainment', description: 'Skits y humor', color: 'from-yellow-500 to-orange-500' },
 ]
 
 interface TemplateSelectorProps {
@@ -31,7 +38,7 @@ interface TemplateSelectorProps {
 export function TemplateSelector({ onSelect, selectedId }: TemplateSelectorProps) {
   const [category, setCategory] = useState('all')
 
-  const categories = ['all', 'educacion', 'lifestyle', 'marketing', 'food', 'health', 'news', 'entertainment']
+  const categories = ['all', 'educacion', 'lifestyle', 'marketing', 'food', 'health', 'news', 'entertainment', 'viajes', 'negocios', 'tecnologia', 'moda', 'gaming', 'mascotas']
 
   const filtered = category === 'all' ? templates : templates.filter(t => t.category === category)
 

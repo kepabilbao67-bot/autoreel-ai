@@ -26,6 +26,7 @@ import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { VideoPreview } from '@/components/video/VideoPreview'
 import { TemplateSelector } from '@/components/video/TemplateSelector'
+import { ShareButtons } from '@/components/shared/ShareButtons'
 
 // Pagina de creacion de video con 4 pasos
 const platforms = [
@@ -618,6 +619,14 @@ Generado con AutoReel AI - autoreel-ai.vercel.app
               <Button variant="secondary" size="lg" onClick={() => { setStep(0); setProgress(0); setResult(null); setUploadedFiles([]) }}>
                 Crear Otro Video
               </Button>
+            </div>
+
+            {/* Share buttons */}
+            <div className="max-w-md mx-auto pt-4 border-t border-dark-border">
+              <ShareButtons
+                title={result?.title || formData.topic}
+                description={result?.description || 'Video creado con AutoReel AI'}
+              />
             </div>
           </CardContent>
         </Card>

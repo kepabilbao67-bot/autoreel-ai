@@ -11,6 +11,22 @@
     @apply bg-dark-bg text-dark-text antialiased;
   }
 
+  html.light body {
+    @apply bg-white text-gray-900;
+  }
+
+  html.light .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-gray-200;
+  }
+
+  html.light .input-dark {
+    @apply bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-primary-500;
+  }
+
+  html.light .card-glass {
+    @apply bg-white border border-gray-200 rounded-2xl p-6;
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;

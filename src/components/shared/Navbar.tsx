@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Play, Menu, X } from 'lucide-react'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 
 // Navbar compartido para paginas publicas
 export function Navbar() {
@@ -19,7 +20,8 @@ export function Navbar() {
             <span className="text-xl font-bold gradient-text">AutoReel AI</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-4">
+            <ThemeToggle />
             <Link href="/login" className="text-dark-muted hover:text-white transition-colors">
               Iniciar Sesion
             </Link>
@@ -28,9 +30,12 @@ export function Navbar() {
             </Link>
           </div>
 
-          <button className="md:hidden text-dark-muted" onClick={() => setMobileOpen(!mobileOpen)}>
-            {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <ThemeToggle />
+            <button className="text-dark-muted" onClick={() => setMobileOpen(!mobileOpen)}>
+              {mobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -17,9 +17,12 @@ import {
   Layout,
   CalendarClock,
   Film,
+  Music,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { NotificationBell } from '@/components/shared/NotificationBell'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import { Onboarding } from '@/components/shared/Onboarding'
 import { AIChatbot } from '@/components/chat/AIChatbot'
 
 // Layout del dashboard con sidebar
@@ -30,6 +33,7 @@ const navItems = [
   { href: '/dashboard/scheduler', label: 'Scheduler', icon: CalendarClock },
   { href: '/dashboard/videos', label: 'Mis Videos', icon: Video },
   { href: '/dashboard/templates', label: 'Plantillas', icon: Layout },
+  { href: '/dashboard/music', label: 'Musica', icon: Music },
   { href: '/dashboard/analytics', label: 'Analiticas', icon: BarChart3 },
   { href: '/dashboard/settings', label: 'Configuracion', icon: Settings },
 ]
@@ -53,11 +57,14 @@ export default function DashboardLayout({
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0">
         <div className="flex flex-col flex-1 glass border-r border-dark-border">
           {/* Logo */}
-          <div className="flex items-center gap-2 px-6 py-5 border-b border-dark-border">
-            <div className="w-8 h-8 rounded-lg bg-gradient-purple flex items-center justify-center">
-              <Play className="w-4 h-4 text-white" />
+          <div className="flex items-center justify-between px-6 py-5 border-b border-dark-border">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-purple flex items-center justify-center">
+                <Play className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-lg font-bold gradient-text">AutoReel AI</span>
             </div>
-            <span className="text-lg font-bold gradient-text">AutoReel AI</span>
+            <ThemeToggle />
           </div>
 
           {/* Plan badge */}
@@ -166,7 +173,10 @@ export default function DashboardLayout({
               </div>
               <span className="font-bold gradient-text">AutoReel AI</span>
             </div>
-            <NotificationBell />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <NotificationBell />
+            </div>
           </div>
         </div>
 
@@ -176,6 +186,9 @@ export default function DashboardLayout({
 
       {/* Chatbot de IA flotante */}
       <AIChatbot />
+
+      {/* Onboarding modal */}
+      <Onboarding />
     </div>
   )
 }

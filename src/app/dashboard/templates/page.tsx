@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 
 // Galeria de plantillas
-const categories = ['Todas', 'Educacion', 'Marketing', 'Lifestyle', 'Entretenimiento', 'Fitness', 'Comida']
+const categories = ['Todas', 'Educacion', 'Marketing', 'Lifestyle', 'Entretenimiento', 'Fitness', 'Comida', 'Viajes', 'Negocios', 'Tecnologia', 'Moda', 'Gaming', 'Mascotas']
 
 const templates = [
   { id: '1', name: 'Tutorial Rapido', category: 'Educacion', description: 'Explica un concepto en 60 segundos', color: 'from-blue-500 to-cyan-500', premium: false, uses: 1240 },
@@ -18,6 +18,13 @@ const templates = [
   { id: '6', name: 'Workout Flow', category: 'Fitness', description: 'Rutinas de ejercicio dinamicas', color: 'from-red-500 to-pink-500', premium: true, uses: 760 },
   { id: '7', name: 'Tips & Tricks', category: 'Educacion', description: 'Lista de consejos practicos', color: 'from-indigo-500 to-violet-500', premium: false, uses: 2300 },
   { id: '8', name: 'Before/After', category: 'Marketing', description: 'Transformaciones visuales', color: 'from-teal-500 to-cyan-500', premium: true, uses: 1890 },
+  { id: '9', name: 'Destinos de Viaje', category: 'Viajes', description: 'Muestra lugares increibles del mundo', color: 'from-sky-500 to-blue-600', premium: false, uses: 1450 },
+  { id: '10', name: 'Pitch de Negocio', category: 'Negocios', description: 'Presenta tu idea en 60 segundos', color: 'from-slate-500 to-gray-700', premium: true, uses: 670 },
+  { id: '11', name: 'Tech Unboxing', category: 'Tecnologia', description: 'Unboxing y reviews de tecnologia', color: 'from-cyan-500 to-blue-500', premium: false, uses: 1120 },
+  { id: '12', name: 'Outfit del Dia', category: 'Moda', description: 'Muestra outfits y tendencias', color: 'from-rose-500 to-pink-600', premium: false, uses: 980 },
+  { id: '13', name: 'Gaming Highlights', category: 'Gaming', description: 'Mejores momentos de gameplay', color: 'from-violet-500 to-fuchsia-500', premium: true, uses: 2050 },
+  { id: '14', name: 'Mascotas Adorables', category: 'Mascotas', description: 'Contenido adorable de mascotas', color: 'from-amber-400 to-orange-500', premium: false, uses: 1780 },
+  { id: '15', name: 'Noticias Express', category: 'Entretenimiento', description: 'Noticias rapidas estilo breaking', color: 'from-red-600 to-rose-500', premium: false, uses: 1340 },
 ]
 
 export default function TemplatesPage() {

@@ -16,6 +16,12 @@ const config: Config = {
         'dark-hover': '#1a1a2e',
         'dark-text': '#e2e8f0',
         'dark-muted': '#94a3b8',
+        'light-bg': '#ffffff',
+        'light-card': '#f8fafc',
+        'light-border': '#e2e8f0',
+        'light-hover': '#f1f5f9',
+        'light-text': '#1e293b',
+        'light-muted': '#64748b',
         primary: {
           50: '#f5f3ff',
           100: '#ede9fe',
