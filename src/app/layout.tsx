@@ -40,8 +40,27 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className="dark" suppressHydrationWarning>
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#7c3aed" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="manifest" href="/manifest.json" />
+      </head>
       <body className={inter.className}>
         <ThemeProvider>{children}</ThemeProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   )

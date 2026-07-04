@@ -22,6 +22,10 @@ import {
   Image as ImageIcon,
   History,
   Users,
+  Mic,
+  Languages,
+  Send,
+  UsersRound,
 } from 'lucide-react'
 import { Badge } from '@/components/ui/Badge'
 import { NotificationBell } from '@/components/shared/NotificationBell'
@@ -43,6 +47,10 @@ const navItems = [
   { href: '/dashboard/calendar', label: 'Calendario', icon: CalendarDays },
   { href: '/dashboard/competitors', label: 'Competidores', icon: Users },
   { href: '/dashboard/images', label: 'Imagenes', icon: ImageIcon },
+  { href: '/dashboard/narration', label: 'Narracion IA', icon: Mic },
+  { href: '/dashboard/translate', label: 'Traducir', icon: Languages },
+  { href: '/dashboard/publish', label: 'Publicar', icon: Send },
+  { href: '/dashboard/team', label: 'Equipo', icon: UsersRound },
   { href: '/dashboard/analytics', label: 'Analiticas', icon: BarChart3 },
   { href: '/dashboard/settings', label: 'Configuracion', icon: Settings },
 ]
