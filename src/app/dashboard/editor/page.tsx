@@ -177,12 +177,13 @@ export default function EditorPage() {
         images.push(img)
       }
 
-      const W = 720
-      const H = 1280
+      // Tamano reducido para GIF (rapido y ligero, no satura el navegador)
+      const W = 480
+      const H = 854
       const FPS = 30
 
       // ===== METODO 0: GIF animado (100% fiable, siempre funciona) =====
-      // Genera un GIF fluido con transiciones fade entre fotos
+      // Version SIMPLE: 1 frame por foto (ligero, no crashea)
       setStatusMsg('Creando video animado...')
       try {
         const { GIFEncoder, quantize, applyPalette } = await import('gifenc')
@@ -193,67 +194,17 @@ export default function EditorPage() {
         off.height = H
         const offCtx = off.getContext('2d', { willReadFrequently: true })!
 
-        const GIF_FPS = 10 // 10 frames por segundo = fluido y tamano razonable
-        const framesPerPhoto = secPerPhoto * GIF_FPS
-        const fadeFrames = Math.min(5, Math.floor(framesPerPhoto / 3))
-        const frameDelay = Math.round(1000 / GIF_FPS)
-        const totalFrames = images.length * framesPerPhoto
-        let renderedFrames = 0
-
-        // Helper: dibujar imagen cover con opacidad
-        const drawCover = (img: HTMLImageElement, alpha: number) => {
-          offCtx.globalAlpha = alpha
-          const ir = img.naturalWidth / img.naturalHeight
-          const cr = W / H
-          let dw: number, dh: number, dx: number, dy: number
-          if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0 }
-          else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2 }
-          offCtx.drawImage(img, dx, dy, dw, dh)
-          offCtx.globalAlpha = 1
-        }
-
-        const drawTextOverlay = () => {
-          if (!text) return
-          const sz = Math.round(H * (textSize === 1 ? 0.045 : textSize === 2 ? 0.07 : 0.1))
-          offCtx.font = `bold ${sz}px Arial, sans-serif`
-          offCtx.textAlign = 'center'
-          offCtx.textBaseline = 'middle'
-          const y = textPos === 'top' ? H * 0.12 : textPos === 'center' ? H * 0.5 : H * 0.88
-          offCtx.lineWidth = sz * 0.12
-          offCtx.strokeStyle = 'black'
-          offCtx.strokeText(text, W / 2, y, W - 40)
-          offCtx.fillStyle = 'white'
-          offCtx.fillText(text, W / 2, y, W - 40)
-        }
+        // Cada foto dura secPerPhoto segundos (1 frame estatico por foto)
+        const frameDelayMs = secPerPhoto * 1000
 
         for (let i = 0; i < images.length; i++) {
-          for (let f = 0; f < framesPerPhoto; f++) {
-            // Fondo negro
-            offCtx.fillStyle = '#000'
-            offCtx.fillRect(0, 0, W, H)
-
-            // Transicion fade entre fotos
-            if (f < fadeFrames && i > 0) {
-              const p = f / fadeFrames
-              drawCover(images[i - 1], 1 - p)
-              drawCover(images[i], p)
-            } else {
-              drawCover(images[i], 1)
-            }
-            drawTextOverlay()
-
-            // Codificar frame
-            const { data } = offCtx.getImageData(0, 0, W, H)
-            const palette = quantize(data, 256)
-            const index = applyPalette(data, palette)
-            gif.writeFrame(index, W, H, { palette, delay: frameDelay })
-
-            renderedFrames++
-            if (renderedFrames % 3 === 0) {
-              setExportPct(Math.round((renderedFrames / totalFrames) * 100))
-              await new Promise((r) => setTimeout(r, 0))
-            }
-          }
+          renderFrame(offCtx, images[i], W, H)
+          const { data } = offCtx.getImageData(0, 0, W, H)
+          const palette = quantize(data, 256)
+          const index = applyPalette(data, palette)
+          gif.writeFrame(index, W, H, { palette, delay: frameDelayMs })
+          setExportPct(Math.round(((i + 1) / images.length) * 100))
+          await new Promise((r) => setTimeout(r, 0))
         }
 
         gif.finish()
