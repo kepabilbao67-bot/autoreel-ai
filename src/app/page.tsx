@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import {
   Sparkles,
@@ -16,6 +16,11 @@ import {
   ArrowRight,
   Menu,
   X,
+  Users,
+  Twitter,
+  Instagram,
+  Youtube,
+  Github,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -72,11 +77,12 @@ const steps = [
   },
 ]
 
-// Planes de precios
+// Planes de precios con soporte mensual/anual
 const plans = [
   {
     name: 'Starter',
-    price: '$0',
+    priceMonthly: '$0',
+    priceYearly: '$0',
     period: '/mes',
     description: 'Perfecto para probar la plataforma',
     features: [
@@ -91,7 +97,8 @@ const plans = [
   },
   {
     name: 'Creator',
-    price: '$15',
+    priceMonthly: '$15',
+    priceYearly: '$12',
     period: '/mes',
     description: 'Para creadores de contenido serios',
     features: [
@@ -108,7 +115,8 @@ const plans = [
   },
   {
     name: 'Business',
-    price: '$49',
+    priceMonthly: '$49',
+    priceYearly: '$39',
     period: '/mes',
     description: 'Para equipos y agencias',
     features: [
@@ -124,6 +132,11 @@ const plans = [
     cta: 'Contactar Ventas',
     popular: false,
   },
+]
+
+// Marcas que confian en nosotros
+const trustedBrands = [
+  'ContentFlow', 'ViralHub', 'CreatorPro', 'MediaMax', 'SocialBoost', 'ReelMaster'
 ]
 
 // Testimonios
@@ -177,9 +190,34 @@ const faqs = [
   },
 ]
 
+// Componente de contador animado
+function AnimatedCounter({ target, suffix = '' }: { target: number; suffix?: string }) {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    const duration = 2000
+    const steps = 60
+    const increment = target / steps
+    let current = 0
+    const timer = setInterval(() => {
+      current += increment
+      if (current >= target) {
+        setCount(target)
+        clearInterval(timer)
+      } else {
+        setCount(Math.floor(current))
+      }
+    }, duration / steps)
+    return () => clearInterval(timer)
+  }, [target])
+
+  return <span>{count.toLocaleString()}{suffix}</span>
+}
+
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [isYearly, setIsYearly] = useState(false)
 
   return (
     <div className="min-h-screen bg-dark-bg">
@@ -253,10 +291,11 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-4 overflow-hidden">
-        {/* Fondo con gradiente */}
+        {/* Fondo con gradiente mejorado */}
         <div className="absolute inset-0 bg-gradient-hero" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-600/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent-600/20 rounded-full blur-3xl animate-pulse-slow" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-800/10 rounded-full blur-3xl" />
 
         <div className="relative max-w-7xl mx-auto text-center">
           <motion.div
@@ -264,21 +303,44 @@ export default function LandingPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
               <Sparkles className="w-4 h-4 text-primary-400" />
               <span className="text-sm text-dark-muted">Potenciado por GPT-4o + ElevenLabs</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-tight">
-              Crea Videos Virales
+              De Idea a Video Viral
               <br />
-              <span className="gradient-text">con Inteligencia Artificial</span>
+              <span className="gradient-text">en 60 Segundos</span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-dark-muted max-w-2xl mx-auto mb-10">
-              Genera videos profesionales para TikTok, Instagram Reels y YouTube Shorts en segundos.
-              Sin experiencia en edicion. Solo escribe un tema.
+            <p className="text-lg sm:text-xl text-dark-muted max-w-2xl mx-auto mb-8">
+              La IA crea el guion, la voz, los subtitulos, la musica y los efectos. Tu solo
+              escribes el tema. Videos profesionales para TikTok, Reels y Shorts al instante.
             </p>
+
+            {/* Contador de usuarios animado */}
+            <div className="flex items-center justify-center gap-6 mb-10">
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-2">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="w-8 h-8 rounded-full bg-gradient-purple border-2 border-dark-bg flex items-center justify-center">
+                      <Users className="w-3 h-3 text-white" />
+                    </div>
+                  ))}
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-white">+<AnimatedCounter target={10000} /> creadores</p>
+                  <p className="text-xs text-dark-muted">ya generan contenido viral</p>
+                </div>
+              </div>
+              <div className="hidden sm:flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} className="w-4 h-4 fill-yellow-500 text-yellow-500" />
+                ))}
+                <span className="text-sm text-dark-muted ml-1">4.9/5</span>
+              </div>
+            </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
@@ -298,11 +360,11 @@ export default function LandingPage() {
             </div>
 
             <p className="mt-6 text-sm text-dark-muted">
-              Gratis para empezar - No requiere tarjeta de credito
+              Gratis para empezar &bull; No requiere tarjeta de credito &bull; Setup en 30 segundos
             </p>
           </motion.div>
 
-          {/* Typing animation mockup */}
+          {/* Video demo mockup animado */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -317,13 +379,43 @@ export default function LandingPage() {
                 <span className="ml-4 text-sm text-dark-muted">AutoReel AI Studio</span>
               </div>
               <div className="bg-dark-bg rounded-xl p-6 border border-dark-border">
-                <p className="text-dark-muted text-sm mb-2">Tema del video:</p>
-                <p className="text-lg text-white font-mono overflow-hidden whitespace-nowrap border-r-2 border-primary-500 animate-typing">
-                  &quot;5 trucos de productividad para emprendedores&quot;
-                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2">
+                    <p className="text-dark-muted text-sm mb-2">Tema del video:</p>
+                    <p className="text-lg text-white font-mono overflow-hidden whitespace-nowrap border-r-2 border-primary-500 animate-typing">
+                      &quot;5 trucos de productividad para emprendedores&quot;
+                    </p>
+                    <div className="mt-4 space-y-2">
+                      <div className="h-2 bg-primary-500/20 rounded-full overflow-hidden">
+                        <div className="h-full w-3/4 bg-gradient-to-r from-primary-500 to-accent-500 rounded-full animate-pulse-slow" />
+                      </div>
+                      <p className="text-xs text-dark-muted">Generando guion con IA...</p>
+                    </div>
+                  </div>
+                  <div className="hidden sm:flex flex-col items-center justify-center bg-dark-card rounded-lg p-3 border border-dark-border">
+                    <div className="w-12 h-16 bg-gradient-purple rounded-lg flex items-center justify-center mb-2 animate-pulse-slow">
+                      <Play className="w-6 h-6 text-white" />
+                    </div>
+                    <p className="text-[10px] text-dark-muted">Preview 9:16</p>
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Marcas que confian */}
+      <section className="py-12 px-4 border-y border-dark-border/50">
+        <div className="max-w-7xl mx-auto">
+          <p className="text-center text-sm text-dark-muted mb-8">Marcas y creadores que confian en nosotros</p>
+          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12">
+            {trustedBrands.map((brand) => (
+              <div key={brand} className="text-dark-muted/50 text-lg sm:text-xl font-bold tracking-wider hover:text-dark-muted transition-colors">
+                {brand}
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -410,14 +502,35 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-16"
+            className="text-center mb-12"
           >
             <h2 className="text-3xl sm:text-4xl font-bold mb-4">
               Planes para Cada <span className="gradient-text">Creador</span>
             </h2>
-            <p className="text-dark-muted text-lg">
+            <p className="text-dark-muted text-lg mb-8">
               Empieza gratis y escala cuando lo necesites
             </p>
+
+            {/* Toggle mensual/anual */}
+            <div className="inline-flex items-center gap-3 p-1 rounded-full glass">
+              <button
+                onClick={() => setIsYearly(false)}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
+                  !isYearly ? 'bg-primary-500 text-white' : 'text-dark-muted hover:text-white'
+                }`}
+              >
+                Mensual
+              </button>
+              <button
+                onClick={() => setIsYearly(true)}
+                className={`px-5 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
+                  isYearly ? 'bg-primary-500 text-white' : 'text-dark-muted hover:text-white'
+                }`}
+              >
+                Anual
+                <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">-20%</span>
+              </button>
+            </div>
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -439,9 +552,12 @@ export default function LandingPage() {
                   <h3 className="text-xl font-semibold mb-2">{plan.name}</h3>
                   <p className="text-dark-muted text-sm mb-4">{plan.description}</p>
                   <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-4xl font-bold">{plan.price}</span>
+                    <span className="text-4xl font-bold">{isYearly ? plan.priceYearly : plan.priceMonthly}</span>
                     <span className="text-dark-muted">{plan.period}</span>
                   </div>
+                  {isYearly && plan.priceYearly !== '$0' && (
+                    <p className="text-xs text-green-400 mt-1">Ahorra 20% con plan anual</p>
+                  )}
                 </div>
                 <ul className="space-y-3 mb-8">
                   {plan.features.map((feature) => (
@@ -587,20 +703,36 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Footer */}
+      {/* Footer mejorado con redes sociales */}
       <footer className="border-t border-dark-border py-12 px-4">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
+            <div className="md:col-span-2">
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-gradient-purple flex items-center justify-center">
                   <Play className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-xl font-bold gradient-text">AutoReel AI</span>
               </div>
-              <p className="text-dark-muted text-sm">
-                Plataforma lider en creacion de videos con IA para redes sociales.
+              <p className="text-dark-muted text-sm mb-4">
+                Plataforma lider en creacion de videos con IA para redes sociales. Genera contenido
+                viral profesional en segundos.
               </p>
+              {/* Redes sociales */}
+              <div className="flex items-center gap-3">
+                <a href="#" className="w-9 h-9 rounded-lg bg-dark-hover flex items-center justify-center text-dark-muted hover:text-white hover:bg-primary-500/20 transition-colors">
+                  <Twitter className="w-4 h-4" />
+                </a>
+                <a href="#" className="w-9 h-9 rounded-lg bg-dark-hover flex items-center justify-center text-dark-muted hover:text-white hover:bg-primary-500/20 transition-colors">
+                  <Instagram className="w-4 h-4" />
+                </a>
+                <a href="#" className="w-9 h-9 rounded-lg bg-dark-hover flex items-center justify-center text-dark-muted hover:text-white hover:bg-primary-500/20 transition-colors">
+                  <Youtube className="w-4 h-4" />
+                </a>
+                <a href="#" className="w-9 h-9 rounded-lg bg-dark-hover flex items-center justify-center text-dark-muted hover:text-white hover:bg-primary-500/20 transition-colors">
+                  <Github className="w-4 h-4" />
+                </a>
+              </div>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Producto</h4>
@@ -609,28 +741,37 @@ export default function LandingPage() {
                 <li><a href="#pricing" className="hover:text-white transition-colors">Precios</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">API</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Integraciones</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Changelog</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Recursos</h4>
+              <ul className="space-y-2 text-sm text-dark-muted">
+                <li><a href="#" className="hover:text-white transition-colors">Centro de Ayuda</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Tutoriales</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Comunidad</a></li>
+                <li><a href="#" className="hover:text-white transition-colors">Estado del Servicio</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Compania</h4>
               <ul className="space-y-2 text-sm text-dark-muted">
                 <li><a href="#" className="hover:text-white transition-colors">Sobre Nosotros</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Blog</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Carreras</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Contacto</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
-              <ul className="space-y-2 text-sm text-dark-muted">
                 <li><a href="#" className="hover:text-white transition-colors">Privacidad</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Terminos</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Cookies</a></li>
               </ul>
             </div>
           </div>
-          <div className="mt-12 pt-8 border-t border-dark-border text-center text-sm text-dark-muted">
+          <div className="mt-12 pt-8 border-t border-dark-border flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-dark-muted">
             <p>&copy; 2025 AutoReel AI. Todos los derechos reservados.</p>
+            <div className="flex items-center gap-4">
+              <a href="#" className="hover:text-white transition-colors">Privacidad</a>
+              <a href="#" className="hover:text-white transition-colors">Terminos</a>
+              <a href="#" className="hover:text-white transition-colors">Cookies</a>
+            </div>
           </div>
         </div>
       </footer>
