@@ -435,6 +435,15 @@ export default function EditorPage() {
   }
 
   const totalSec = photos.length * secPerPhoto
+  // Formato reloj mm:ss
+  const formatDuration = (s: number) => {
+    const m = Math.floor(s / 60)
+    const sec = s % 60
+    return `${m}:${sec.toString().padStart(2, '0')}`
+  }
+  // Cuantas fotos faltan para llegar a 2 minutos
+  const photosFor2Min = Math.ceil(120 / secPerPhoto)
+  const reached2Min = totalSec >= 120
 
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] gap-2 overflow-hidden">
@@ -444,8 +453,10 @@ export default function EditorPage() {
           <Film className="w-5 h-5 text-primary-400" />
           <h1 className="text-lg font-bold">Editor de Video</h1>
           {photos.length > 0 && (
-            <span className="text-[11px] text-primary-400 bg-primary-500/10 px-2 py-0.5 rounded-full">
-              {photos.length} fotos · {totalSec}s
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-mono ${
+              reached2Min ? 'text-green-400 bg-green-500/10' : 'text-primary-400 bg-primary-500/10'
+            }`}>
+              🕐 {formatDuration(totalSec)} · {photos.length} fotos
             </span>
           )}
         </div>
@@ -635,6 +646,20 @@ export default function EditorPage() {
           </div>
         </div>
       </div>
+
+      {/* BARRA DE PROGRESO HACIA 2 MINUTOS */}
+      {photos.length > 0 && (
+        <div className="flex-shrink-0 flex items-center gap-2 px-1">
+          <span className="text-[10px] text-dark-muted whitespace-nowrap">
+            {reached2Min ? '✅ Video largo listo!' : `Faltan ${Math.max(0, photosFor2Min - photos.length)} fotos para 2 min`}
+          </span>
+          <div className="flex-1 h-1.5 bg-dark-bg rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${reached2Min ? 'bg-green-500' : 'bg-primary-500'}`}
+              style={{ width: `${Math.min(100, (totalSec / 120) * 100)}%` }} />
+          </div>
+          <span className="text-[10px] text-primary-400 font-mono whitespace-nowrap">{formatDuration(totalSec)} / 2:00</span>
+        </div>
+      )}
 
       {/* TIMELINE */}
       <div className="flex-shrink-0 bg-dark-card border border-dark-border rounded-xl p-2 overflow-x-auto">
