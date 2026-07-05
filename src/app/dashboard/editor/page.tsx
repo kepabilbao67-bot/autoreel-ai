@@ -38,6 +38,73 @@ export default function EditorPage() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  // Estado para generacion de video con IA (Replicate)
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiStatus, setAiStatus] = useState('')
+  const [aiVideoUrl, setAiVideoUrl] = useState('')
+
+  // Genera un video con IA a partir de la primera foto (image-to-video)
+  const generateAIVideo = async () => {
+    if (photos.length === 0) return
+    setAiGenerating(true)
+    setAiVideoUrl('')
+    setError('')
+    setAiStatus('Enviando imagen a la IA...')
+
+    try {
+      // Usar la foto actual seleccionada
+      const image = photos[Math.min(currentIdx, photos.length - 1)].src
+
+      const res = await fetch('/api/ai/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Error al generar video con IA')
+      }
+
+      // Si ya termino
+      if (data.status === 'succeeded' && data.videoUrl) {
+        setAiVideoUrl(data.videoUrl)
+        setAiStatus('Video IA listo!')
+        setAiGenerating(false)
+        return
+      }
+
+      // Polling hasta que termine
+      if (data.id) {
+        setAiStatus('La IA esta creando el video (puede tardar 1-2 min)...')
+        let attempts = 0
+        const poll = async (): Promise<void> => {
+          if (attempts++ > 60) throw new Error('Tardo demasiado. Intenta de nuevo.')
+          await new Promise((r) => setTimeout(r, 3000))
+          const pollRes = await fetch(`/api/ai/generate-video?id=${data.id}`)
+          const pollData = await pollRes.json()
+          setAiStatus(`Generando... (${pollData.status})`)
+          if (pollData.status === 'succeeded' && pollData.videoUrl) {
+            setAiVideoUrl(pollData.videoUrl)
+            setAiStatus('Video IA listo!')
+            setAiGenerating(false)
+            return
+          }
+          if (pollData.status === 'failed') {
+            throw new Error(pollData.error || 'La IA no pudo generar el video')
+          }
+          return poll()
+        }
+        await poll()
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error con la IA')
+      setAiStatus('')
+      setAiGenerating(false)
+    }
+  }
+
   // ---- SUBIR FOTOS ----
   const addPhotos = (files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
@@ -392,7 +459,13 @@ export default function EditorPage() {
           {!exporting && !downloadReady && photos.length > 0 && (
             <button onClick={exportVideo}
               className="flex items-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-400 text-white rounded-lg text-sm font-medium">
-              <Film className="w-4 h-4" /> Crear Video
+              <Film className="w-4 h-4" /> Crear Slideshow
+            </button>
+          )}
+          {!aiGenerating && photos.length > 0 && (
+            <button onClick={generateAIVideo}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-500 hover:opacity-90 text-white rounded-lg text-sm font-medium">
+              <Loader2 className={`w-4 h-4 ${aiGenerating ? 'animate-spin' : ''}`} /> Animar con IA
             </button>
           )}
           {downloadReady && (
@@ -408,6 +481,32 @@ export default function EditorPage() {
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>{error}</span>
           <button onClick={() => setError('')} className="ml-auto"><X className="w-4 h-4" /></button>
+        </div>
+      )}
+
+      {/* ESTADO IA */}
+      {aiGenerating && (
+        <div className="flex-shrink-0 bg-purple-500/10 border border-purple-500/30 rounded-xl p-3">
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+            <span className="text-sm text-purple-300 font-medium">{aiStatus}</span>
+          </div>
+        </div>
+      )}
+
+      {/* VIDEO IA GENERADO */}
+      {aiVideoUrl && (
+        <div className="flex-shrink-0 bg-purple-500/10 border border-purple-500/30 rounded-xl p-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-purple-300 font-medium flex items-center gap-2">
+              <Check className="w-4 h-4" /> Video IA generado
+            </span>
+            <a href={aiVideoUrl} download="video-ia.mp4" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 bg-purple-500 hover:bg-purple-400 text-white rounded-lg text-xs font-medium">
+              <Download className="w-3 h-3" /> Descargar MP4
+            </a>
+          </div>
+          <video src={aiVideoUrl} controls autoPlay loop className="w-full max-w-[240px] mx-auto rounded-lg" />
         </div>
       )}
 
