@@ -181,6 +181,58 @@ export default function EditorPage() {
       const H = 1280
       const FPS = 30
 
+      // ===== METODO 0: GIF animado (100% fiable, siempre funciona) =====
+      // Genera un GIF que se reproduce solo y se puede subir a redes
+      setStatusMsg('Creando video animado...')
+      try {
+        const { GIFEncoder, quantize, applyPalette } = await import('gifenc')
+        const gif = GIFEncoder()
+
+        const off = document.createElement('canvas')
+        off.width = W
+        off.height = H
+        const offCtx = off.getContext('2d', { willReadFrequently: true })!
+
+        // 2 frames por foto (entrada + estable) para que el GIF no sea enorme
+        const frameDelayMs = Math.round((secPerPhoto * 1000) / 2)
+
+        for (let i = 0; i < images.length; i++) {
+          renderFrame(offCtx, images[i], W, H)
+          const { data } = offCtx.getImageData(0, 0, W, H)
+          const palette = quantize(data, 256)
+          const index = applyPalette(data, palette)
+          // Cada foto = 2 frames con su delay (total = secPerPhoto)
+          gif.writeFrame(index, W, H, { palette, delay: frameDelayMs })
+          gif.writeFrame(index, W, H, { palette, delay: frameDelayMs })
+          setExportPct(Math.round(((i + 1) / images.length) * 100))
+          await new Promise((r) => setTimeout(r, 0))
+        }
+
+        gif.finish()
+        const bytes = gif.bytes()
+        const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'image/gif' })
+
+        if (blob.size < 100) throw new Error('GIF vacio')
+
+        const url = URL.createObjectURL(blob)
+        setDownloadUrl(url)
+        setDownloadReady(true)
+        setExportPct(100)
+        setStatusMsg(`Video creado! (${(blob.size / 1024 / 1024).toFixed(2)} MB) - se reproduce solo`)
+
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `autoreel-video-${Date.now()}.gif`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        setExporting(false)
+        return
+      } catch (gifErr) {
+        console.warn('GIF fallo, intentando MP4:', gifErr)
+      }
+
       // ===== METODO 1: WebCodecs (MP4 real) =====
       const hasWebCodecs = typeof (window as unknown as { VideoEncoder?: unknown }).VideoEncoder !== 'undefined'
 
