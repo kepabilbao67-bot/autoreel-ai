@@ -159,7 +159,7 @@ export default function EditorPage() {
 
       // Configurar MediaRecorder con el canvas que esta EN el DOM
       setStatusMsg('Iniciando grabacion...')
-      const stream = canvas.captureStream(15) // 15 fps
+      const stream = canvas.captureStream() // Sin fps = Chrome decide automaticamente
 
       // Encontrar mime soportado
       let mime = ''
@@ -190,7 +190,7 @@ export default function EditorPage() {
       })
 
       // EMPEZAR A GRABAR
-      recorder.start(100) // pedir datos cada 100ms
+      recorder.start() // Sin timeslice - Chrome maneja los datos
       setStatusMsg('Grabando video...')
 
       // Esperar un poco para que el recorder se inicialice
@@ -234,8 +234,8 @@ export default function EditorPage() {
           const elapsedMs = i * duration + (Date.now() - startTime)
           setExportPct(Math.min(99, Math.round((elapsedMs / totalMs) * 100)))
 
-          // Esperar 66ms (~15fps)
-          await new Promise(r => setTimeout(r, 66))
+          // Esperar al siguiente frame usando requestAnimationFrame (clave para que Chrome capture)
+          await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 50)))
         }
       }
 
@@ -250,8 +250,8 @@ export default function EditorPage() {
       const videoBlob = await recordingDone
 
       // Verificar que tiene contenido
-      if (videoBlob.size < 500) {
-        throw new Error(`El video esta vacio (${videoBlob.size} bytes). Intenta de nuevo o usa Chrome.`)
+      if (videoBlob.size < 100) {
+        throw new Error(`El video esta vacio (${videoBlob.size} bytes). Asegurate de usar Google Chrome en escritorio (no movil). Si sigue fallando, intenta con menos fotos.`)
       }
 
       // Crear URL y marcar como listo
@@ -259,7 +259,7 @@ export default function EditorPage() {
       setDownloadUrl(url)
       setDownloadReady(true)
       setExportPct(100)
-      setStatusMsg(`Video creado! (${(videoBlob.size / 1024 / 1024).toFixed(1)} MB)`)
+      setStatusMsg(`Video creado! (${(videoBlob.size / 1024 / 1024).toFixed(2)} MB) - ${photos.length} fotos x ${secPerPhoto}s`)
 
       // Auto descargar
       const link = document.createElement('a')
@@ -399,8 +399,8 @@ export default function EditorPage() {
             {/* Este canvas ES el video. Esta en el DOM y visible = captureStream funciona */}
             <canvas
               ref={canvasRef}
-              width={360}
-              height={640}
+              width={540}
+              height={960}
               className="rounded-2xl border-2 border-dark-border shadow-2xl bg-black max-h-[60vh] w-auto"
             />
 
