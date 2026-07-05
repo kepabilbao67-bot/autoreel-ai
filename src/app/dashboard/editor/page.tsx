@@ -124,156 +124,194 @@ export default function EditorPage() {
   }, [currentIdx, photos, text, textPos, textSize])
 
   // ---- EXPORTAR VIDEO ----
+  // Dibuja una foto + texto en un contexto dado (reutilizable)
+  const renderFrame = (
+    ctx: CanvasRenderingContext2D,
+    img: HTMLImageElement,
+    W: number,
+    H: number
+  ) => {
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, W, H)
+
+    const ir = img.naturalWidth / img.naturalHeight
+    const cr = W / H
+    let dw: number, dh: number, dx: number, dy: number
+    if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0 }
+    else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2 }
+    ctx.drawImage(img, dx, dy, dw, dh)
+
+    if (text) {
+      const sz = Math.round(H * (textSize === 1 ? 0.045 : textSize === 2 ? 0.07 : 0.1))
+      ctx.font = `bold ${sz}px Arial, sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      const y = textPos === 'top' ? H * 0.12 : textPos === 'center' ? H * 0.5 : H * 0.88
+      ctx.lineWidth = sz * 0.12
+      ctx.strokeStyle = 'black'
+      ctx.strokeText(text, W / 2, y, W - 40)
+      ctx.fillStyle = 'white'
+      ctx.fillText(text, W / 2, y, W - 40)
+    }
+  }
+
   const exportVideo = async () => {
     if (photos.length === 0) return
-
-    const canvas = canvasRef.current
-    if (!canvas) { setError('Error: canvas no disponible'); return }
 
     setExporting(true)
     setExportPct(0)
     setError('')
     setDownloadReady(false)
     setDownloadUrl('')
-    setStatusMsg('Preparando...')
+    setStatusMsg('Cargando imagenes...')
 
     try {
-      const ctx = canvas.getContext('2d')
-      if (!ctx) throw new Error('No se pudo obtener contexto del canvas')
-
-      const W = canvas.width
-      const H = canvas.height
-
-      // Cargar todas las imagenes primero
-      setStatusMsg('Cargando imagenes...')
       const images: HTMLImageElement[] = []
       for (const photo of photos) {
         const img = await new Promise<HTMLImageElement>((resolve, reject) => {
           const i = new Image()
           i.onload = () => resolve(i)
-          i.onerror = () => reject(new Error('No se pudo cargar imagen'))
+          i.onerror = () => reject(new Error('No se pudo cargar una imagen'))
           i.src = photo.src
         })
         images.push(img)
       }
 
-      // Configurar MediaRecorder con el canvas que esta EN el DOM
-      setStatusMsg('Iniciando grabacion...')
-      const stream = canvas.captureStream() // Sin fps = Chrome decide automaticamente
+      const W = 720
+      const H = 1280
+      const FPS = 30
 
-      // Encontrar mime soportado
-      let mime = ''
-      const mimes = ['video/webm;codecs=vp8', 'video/webm', 'video/mp4']
-      for (const m of mimes) {
-        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(m)) {
-          mime = m
-          break
-        }
-      }
-      if (!mime) throw new Error('Tu navegador no soporta grabar video. Usa Google Chrome por favor.')
+      // ===== METODO 1: WebCodecs (MP4 real) =====
+      const hasWebCodecs = typeof (window as unknown as { VideoEncoder?: unknown }).VideoEncoder !== 'undefined'
 
-      const recorder = new MediaRecorder(stream, { mimeType: mime })
-      const chunks: Blob[] = []
+      if (hasWebCodecs) {
+        setStatusMsg('Creando video MP4...')
+        try {
+          const { Muxer, ArrayBufferTarget } = await import('mp4-muxer')
+          const muxer = new Muxer({
+            target: new ArrayBufferTarget(),
+            video: { codec: 'avc', width: W, height: H },
+            fastStart: 'in-memory',
+          })
 
-      recorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunks.push(event.data)
-        }
-      }
+          const VideoEncoderClass = (window as unknown as { VideoEncoder: new (opts: unknown) => {
+            configure: (c: unknown) => void
+            encode: (f: unknown, o?: unknown) => void
+            flush: () => Promise<void>
+          } }).VideoEncoder
+          const encoder = new VideoEncoderClass({
+            output: (chunk: unknown, meta: unknown) => muxer.addVideoChunk(chunk as never, meta as never),
+            error: (e: unknown) => console.error('Encoder error:', e),
+          })
+          encoder.configure({
+            codec: 'avc1.42001f', width: W, height: H,
+            bitrate: 3_000_000, framerate: FPS,
+          })
 
-      // Promesa que se resuelve cuando para de grabar
-      const recordingDone = new Promise<Blob>((resolve) => {
-        recorder.onstop = () => {
-          const blob = new Blob(chunks, { type: mime })
-          resolve(blob)
-        }
-      })
+          const off = document.createElement('canvas')
+          off.width = W; off.height = H
+          const offCtx = off.getContext('2d')!
 
-      // EMPEZAR A GRABAR
-      recorder.start() // Sin timeslice - Chrome maneja los datos
-      setStatusMsg('Grabando video...')
+          const framesPerPhoto = secPerPhoto * FPS
+          const totalFrames = images.length * framesPerPhoto
+          let frameNum = 0
+          const microPerFrame = 1_000_000 / FPS
 
-      // Esperar un poco para que el recorder se inicialice
-      await new Promise(r => setTimeout(r, 200))
-
-      // Dibujar cada foto durante X segundos EN TIEMPO REAL
-      for (let i = 0; i < images.length; i++) {
-        const img = images[i]
-        const startTime = Date.now()
-        const duration = secPerPhoto * 1000 // duracion en ms
-
-        // Dibujar esta foto repetidamente durante su duracion
-        while (Date.now() - startTime < duration) {
-          // Limpiar
-          ctx.fillStyle = '#000'
-          ctx.fillRect(0, 0, W, H)
-
-          // Dibujar imagen
-          const ir = img.naturalWidth / img.naturalHeight
-          const cr = W / H
-          let dw: number, dh: number, dx: number, dy: number
-          if (ir > cr) { dh = H; dw = H * ir; dx = (W - dw) / 2; dy = 0 }
-          else { dw = W; dh = W / ir; dx = 0; dy = (H - dh) / 2 }
-          ctx.drawImage(img, dx, dy, dw, dh)
-
-          // Texto
-          if (text) {
-            const sz = textSize === 1 ? 28 : textSize === 2 ? 44 : 64
-            ctx.font = `bold ${sz}px Arial`
-            ctx.textAlign = 'center'
-            const y = textPos === 'top' ? H * 0.12 : textPos === 'center' ? H * 0.5 : H * 0.88
-            ctx.strokeStyle = 'black'
-            ctx.lineWidth = 4
-            ctx.strokeText(text, W / 2, y, W - 20)
-            ctx.fillStyle = 'white'
-            ctx.fillText(text, W / 2, y, W - 20)
+          for (let i = 0; i < images.length; i++) {
+            renderFrame(offCtx, images[i], W, H)
+            const VideoFrameClass = (window as unknown as { VideoFrame: new (src: unknown, init: unknown) => { close: () => void } }).VideoFrame
+            for (let f = 0; f < framesPerPhoto; f++) {
+              const frame = new VideoFrameClass(off, { timestamp: frameNum * microPerFrame, duration: microPerFrame })
+              encoder.encode(frame, { keyFrame: f === 0 })
+              frame.close()
+              frameNum++
+              if (frameNum % 5 === 0) {
+                setExportPct(Math.min(99, Math.round((frameNum / totalFrames) * 100)))
+                await new Promise((r) => setTimeout(r, 0))
+              }
+            }
           }
 
-          // Actualizar progreso
-          const totalMs = photos.length * duration
-          const elapsedMs = i * duration + (Date.now() - startTime)
-          setExportPct(Math.min(99, Math.round((elapsedMs / totalMs) * 100)))
+          setStatusMsg('Finalizando...')
+          await encoder.flush()
+          muxer.finalize()
+          const target = muxer.target as { buffer: ArrayBuffer }
+          const blob = new Blob([target.buffer], { type: 'video/mp4' })
+          if (blob.size < 100) throw new Error('Video vacio')
 
-          // Esperar al siguiente frame usando requestAnimationFrame (clave para que Chrome capture)
-          await new Promise<void>(r => requestAnimationFrame(() => setTimeout(r, 50)))
+          const url = URL.createObjectURL(blob)
+          setDownloadUrl(url)
+          setDownloadReady(true)
+          setExportPct(100)
+          setStatusMsg(`Video MP4 creado! (${(blob.size / 1024 / 1024).toFixed(2)} MB)`)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = `autoreel-video-${Date.now()}.mp4`
+          document.body.appendChild(link); link.click(); document.body.removeChild(link)
+          setExporting(false)
+          return
+        } catch (wcErr) {
+          console.warn('WebCodecs fallo, usando MediaRecorder:', wcErr)
         }
       }
 
-      // Esperar un frame mas para asegurar que el ultimo frame se graba
-      await new Promise(r => setTimeout(r, 300))
+      // ===== METODO 2: MediaRecorder (fallback WebM) =====
+      setStatusMsg('Creando video...')
+      const canvas = canvasRef.current
+      if (!canvas) throw new Error('Canvas no disponible')
+      const ctx = canvas.getContext('2d')!
+      const cW = canvas.width
+      const cH = canvas.height
 
-      // PARAR GRABACION
-      setStatusMsg('Finalizando...')
-      recorder.stop()
+      const stream = canvas.captureStream(FPS)
+      let mime = ''
+      for (const m of ['video/webm;codecs=vp8', 'video/webm', 'video/mp4']) {
+        if (MediaRecorder.isTypeSupported(m)) { mime = m; break }
+      }
+      if (!mime) throw new Error('Tu navegador no soporta crear videos. Usa Google Chrome.')
 
-      // Esperar a que el blob este listo
-      const videoBlob = await recordingDone
+      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 3_000_000 })
+      const chunks: Blob[] = []
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data) }
+      const done = new Promise<Blob>((resolve) => {
+        recorder.onstop = () => resolve(new Blob(chunks, { type: mime }))
+      })
 
-      // Verificar que tiene contenido
-      if (videoBlob.size < 100) {
-        throw new Error(`El video esta vacio (${videoBlob.size} bytes). Asegurate de usar Google Chrome en escritorio (no movil). Si sigue fallando, intenta con menos fotos.`)
+      recorder.start(100)
+      await new Promise((r) => setTimeout(r, 200))
+
+      for (let i = 0; i < images.length; i++) {
+        const start = Date.now()
+        const dur = secPerPhoto * 1000
+        while (Date.now() - start < dur) {
+          renderFrame(ctx, images[i], cW, cH)
+          const totalMs = images.length * dur
+          const elapsed = i * dur + (Date.now() - start)
+          setExportPct(Math.min(99, Math.round((elapsed / totalMs) * 100)))
+          await new Promise<void>((r) => requestAnimationFrame(() => setTimeout(r, 40)))
+        }
       }
 
-      // Crear URL y marcar como listo
-      const url = URL.createObjectURL(videoBlob)
+      await new Promise((r) => setTimeout(r, 300))
+      recorder.stop()
+      const blob = await done
+      if (blob.size < 100) throw new Error('El video salio vacio. Usa Chrome de escritorio.')
+
+      const url = URL.createObjectURL(blob)
       setDownloadUrl(url)
       setDownloadReady(true)
       setExportPct(100)
-      setStatusMsg(`Video creado! (${(videoBlob.size / 1024 / 1024).toFixed(2)} MB) - ${photos.length} fotos x ${secPerPhoto}s`)
-
-      // Auto descargar
+      setStatusMsg(`Video creado! (${(blob.size / 1024 / 1024).toFixed(2)} MB)`)
       const link = document.createElement('a')
       link.href = url
       link.download = `autoreel-video-${Date.now()}.webm`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
+      document.body.appendChild(link); link.click(); document.body.removeChild(link)
+      setExporting(false)
 
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Error desconocido'
       setError(msg)
       setStatusMsg('')
-    } finally {
       setExporting(false)
     }
   }
