@@ -12,6 +12,12 @@ function getOpenAI(): OpenAI {
   return _openai
 }
 
+// Verifica si hay una API key valida de OpenAI configurada
+function hasValidKey(): boolean {
+  const key = process.env.OPENAI_API_KEY
+  return !!(key && key !== 'sk-placeholder' && key.startsWith('sk-'))
+}
+
 // Generar guion para video
 export async function generateScript(params: {
   topic: string
@@ -21,6 +27,20 @@ export async function generateScript(params: {
   language: string
 }) {
   const { topic, platform, duration, style, language } = params
+
+  // Modo demo si no hay API key
+  if (!hasValidKey()) {
+    return `[0-3s] HOOK: "¿Sabias esto sobre ${topic}?"
+
+[3-${Math.floor(duration * 0.4)}s] INTRO: Hoy te cuento algo sobre ${topic} que va a cambiar tu forma de verlo. Presta atencion.
+
+[${Math.floor(duration * 0.4)}-${Math.floor(duration * 0.8)}s] DESARROLLO:
+- Punto clave 1 sobre ${topic}
+- El error que casi todos cometen
+- La estrategia que si funciona
+
+[${Math.floor(duration * 0.8)}-${duration}s] CTA: Si te sirvio, dale like y sigue para mas. Guarda este video!`
+  }
 
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o',
@@ -46,6 +66,17 @@ export async function generateScript(params: {
 
 // Generar subtitulos con timestamps
 export async function generateSubtitles(script: string, duration: number) {
+  // Modo demo si no hay API key
+  if (!hasValidKey()) {
+    const step = Math.max(3, Math.floor(duration / 5))
+    const subs = []
+    const phrases = ['¿Sabias esto?', 'Presta atencion', 'Esto es clave', 'El secreto es...', '¡Sigue para mas!']
+    for (let t = 0, i = 0; t < duration && i < phrases.length; t += step, i++) {
+      subs.push({ start: t, end: Math.min(t + step, duration), text: phrases[i] })
+    }
+    return subs
+  }
+
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o',
     messages: [
@@ -74,6 +105,16 @@ export async function generateSubtitles(script: string, duration: number) {
 
 // Sugerir musica de fondo
 export async function suggestMusic(params: { topic: string; style: string; mood: string }) {
+  // Modo demo si no hay API key
+  if (!hasValidKey()) {
+    return {
+      genre: params.mood === 'calmado' ? 'Lo-fi' : 'Pop electronico',
+      bpm: 110,
+      mood: params.mood,
+      suggestions: ['Upbeat Vibes', 'Chill Background', 'Viral Beat 2025'],
+    }
+  }
+
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o',
     messages: [
@@ -101,6 +142,16 @@ export async function suggestMusic(params: { topic: string; style: string; mood:
 
 // Generar hashtags, titulo y descripcion
 export async function generateHashtags(params: { topic: string; platform: string; language: string }) {
+  // Modo demo si no hay API key
+  if (!hasValidKey()) {
+    const clean = params.topic.replace(/\s+/g, '').toLowerCase().slice(0, 15)
+    return {
+      title: `${params.topic} - Lo que NADIE te cuenta 🔥`,
+      description: `Todo sobre ${params.topic}. Guarda y sigue para mas! 🚀`,
+      hashtags: ['#fyp', '#parati', '#viral', `#${clean}`, '#tips', '#trending', '#2025'],
+    }
+  }
+
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o',
     messages: [
@@ -129,6 +180,19 @@ export async function generateHashtags(params: { topic: string; platform: string
 
 // Detectar tendencias actuales
 export async function detectTrends(params: { niche: string; platform: string }) {
+  // Modo demo si no hay API key
+  if (!hasValidKey()) {
+    return {
+      trends: [
+        { topic: `${params.niche}: retos virales`, viralScore: 92, description: 'Formato reto que engancha', suggestedAngles: ['Antes/despues', 'Dia 1 vs Dia 30'] },
+        { topic: `Tips rapidos de ${params.niche}`, viralScore: 87, description: 'Microcontenido educativo', suggestedAngles: ['3 errores comunes', 'Lo que nadie dice'] },
+        { topic: `${params.niche} en 30 segundos`, viralScore: 81, description: 'Contenido express', suggestedAngles: ['Tutorial rapido', 'Hack util'] },
+        { topic: `Storytime de ${params.niche}`, viralScore: 78, description: 'Historias personales', suggestedAngles: ['Mi experiencia', 'Lo que aprendi'] },
+        { topic: `Tendencia ${params.niche} 2025`, viralScore: 74, description: 'Lo que viene este ano', suggestedAngles: ['Predicciones', 'Novedades'] },
+      ],
+    }
+  }
+
   const response = await getOpenAI().chat.completions.create({
     model: 'gpt-4o',
     messages: [
