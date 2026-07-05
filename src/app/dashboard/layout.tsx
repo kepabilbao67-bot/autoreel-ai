@@ -215,10 +215,10 @@ export default function DashboardLayout({
 
       {/* Plan badge */}
       <div className="px-4 py-3">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-500/10 border border-primary-500/20">
-          <Crown className="w-4 h-4 text-primary-400" />
-          <span className="text-sm text-primary-300">Plan Starter</span>
-          <Badge variant="info" className="ml-auto text-[10px]">FREE</Badge>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+          <Crown className="w-4 h-4 text-yellow-400" />
+          <span className="text-sm text-yellow-300">Plan Business</span>
+          <Badge variant="success" className="ml-auto text-[10px]">PRO</Badge>
         </div>
       </div>
 
