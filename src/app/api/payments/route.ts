@@ -1,17 +1,25 @@
 import { NextResponse } from 'next/server'
-import { createCheckoutSession } from '@/lib/stripe'
+import { createCheckoutSession, PLANS } from '@/lib/stripe'
+import { requireApiUser } from '@/lib/api-auth'
 import type { PlanType } from '@/lib/stripe'
 
 // POST - Crear sesion de checkout en Stripe
 export async function POST(request: Request) {
-  try {
-    const { plan, userId, email } = await request.json()
+  // userId y email salen de la sesion: el webhook sube de plan a quien figure
+  // en metadata.userId, asi que no puede venir del cliente.
+  const auth = await requireApiUser(request, 'api', { allowAnonymous: false })
+  if (auth instanceof NextResponse) return auth
 
-    if (!plan || !userId || !email) {
-      return NextResponse.json(
-        { error: 'Se requiere plan, userId y email' },
-        { status: 400 }
-      )
+  try {
+    const { plan } = await request.json()
+    const userId = auth.id
+    const email = auth.email
+
+    if (!plan || !Object.prototype.hasOwnProperty.call(PLANS, plan) || plan === 'starter') {
+      return NextResponse.json({ error: 'Plan no valido' }, { status: 400 })
+    }
+    if (!email) {
+      return NextResponse.json({ error: 'La cuenta no tiene email' }, { status: 400 })
     }
 
     const session = await createCheckoutSession({

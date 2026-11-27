@@ -53,7 +53,8 @@ export async function POST(request: Request) {
     const { createSupabaseAdmin } = await import('@/lib/supabase')
     const supabase = createSupabaseAdmin()
 
-    const userId = formData.get('userId') as string || 'demo-user'
+    // Carpeta del usuario de la sesion (nunca un userId enviado por el cliente)
+    const userId = auth.id ?? 'demo-user'
     const ext = file.name.split('.').pop()
     const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 

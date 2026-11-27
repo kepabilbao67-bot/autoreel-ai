@@ -18,12 +18,21 @@ export type ApiBucket = keyof typeof RATE_LIMITS
 
 export interface ApiUser {
   id: string | null // null en modo demo anonimo
+  email: string | null
   anonymous: boolean
+}
+
+export interface AuthenticatedApiUser extends ApiUser {
+  id: string
+  anonymous: false
 }
 
 interface RequireOptions {
   // false para endpoints baratos de sondeo (p.ej. consultar estado)
   rateLimit?: boolean
+  // false para endpoints que necesitan un usuario real (datos, pagos):
+  // en modo demo sin Supabase responden 503 en vez de dejar pasar.
+  allowAnonymous?: boolean
 }
 
 function isSupabaseConfigured(): boolean {
@@ -78,11 +87,27 @@ function tooManyRequests(resetAt: number): NextResponse {
 export async function requireApiUser(
   request: Request,
   bucket: ApiBucket,
+  options: RequireOptions & { allowAnonymous: false }
+): Promise<AuthenticatedApiUser | NextResponse>
+export async function requireApiUser(
+  request: Request,
+  bucket: ApiBucket,
+  options?: RequireOptions
+): Promise<ApiUser | NextResponse>
+export async function requireApiUser(
+  request: Request,
+  bucket: ApiBucket,
   options: RequireOptions = {}
 ): Promise<ApiUser | NextResponse> {
   const applyRateLimit = options.rateLimit !== false
 
   if (!isSupabaseConfigured()) {
+    if (options.allowAnonymous === false) {
+      return NextResponse.json(
+        { error: 'Autenticacion no configurada. Configura Supabase.' },
+        { status: 503 }
+      )
+    }
     if (hasPaidProviderConfigured() && process.env.ALLOW_ANONYMOUS_AI !== 'true') {
       return NextResponse.json(
         { error: 'Autenticacion no configurada. Configura Supabase para usar la IA.' },
@@ -93,10 +118,11 @@ export async function requireApiUser(
       const rl = rateLimit(`anon:${bucket}:${clientIp(request)}`, RATE_LIMITS[bucket])
       if (!rl.allowed) return tooManyRequests(rl.resetAt)
     }
-    return { id: null, anonymous: true }
+    return { id: null, email: null, anonymous: true }
   }
 
   let userId: string | null = null
+  let email: string | null = null
   try {
     const { createServerClient } = await import('@supabase/ssr')
     const cookies = parseCookies(request.headers.get('cookie'))
@@ -113,7 +139,10 @@ export async function requireApiUser(
       }
     )
     const { data, error } = await supabase.auth.getUser()
-    if (!error && data.user) userId = data.user.id
+    if (!error && data.user) {
+      userId = data.user.id
+      email = data.user.email ?? null
+    }
   } catch (error) {
     console.error('Error verificando sesion:', error)
   }
@@ -127,5 +156,5 @@ export async function requireApiUser(
     if (!rl.allowed) return tooManyRequests(rl.resetAt)
   }
 
-  return { id: userId, anonymous: false }
+  return { id: userId, email, anonymous: false }
 }
