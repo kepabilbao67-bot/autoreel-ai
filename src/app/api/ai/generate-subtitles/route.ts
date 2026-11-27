@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { generateSubtitles } from '@/lib/openai'
+import { requireApiUser } from '@/lib/api-auth'
 
 // POST - Genera subtitulos con timestamps
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'ai')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { script, duration } = await request.json()
 

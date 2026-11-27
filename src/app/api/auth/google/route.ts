@@ -10,8 +10,9 @@ export async function GET() {
     }
 
     // Modo produccion con Supabase
-    const { createSupabaseAdmin } = await import('@/lib/supabase')
-    const supabase = createSupabaseAdmin()
+    // Cliente con cookies: guarda el code verifier PKCE que necesita el callback
+    const { createSupabaseRouteClient } = await import('@/lib/supabase-server')
+    const supabase = await createSupabaseRouteClient()
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {

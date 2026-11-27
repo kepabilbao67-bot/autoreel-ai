@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireApiUser } from '@/lib/api-auth'
 
 // Respuestas mock para demo
 function getMockResult(topic: string, platform: string, style: string, duration: number, language: string) {
@@ -74,6 +75,9 @@ function getMockResult(topic: string, platform: string, style: string, duration:
 
 // POST - Genera TODO con un solo tema
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'ai')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { topic, platform, duration, style, language } = await request.json()
 

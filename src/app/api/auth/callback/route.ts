@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase'
+import { createSupabaseRouteClient } from '@/lib/supabase-server'
 
 // GET - Callback de OAuth
 export async function GET(request: Request) {
@@ -8,8 +9,10 @@ export async function GET(request: Request) {
     const code = searchParams.get('code')
 
     if (code) {
+      // Intercambia el codigo y guarda la sesion en cookies
+      const authClient = await createSupabaseRouteClient()
+      const { data, error } = await authClient.auth.exchangeCodeForSession(code)
       const supabase = createSupabaseAdmin()
-      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
       if (error) {
         return NextResponse.redirect(new URL('/login?error=callback_failed', request.url))

@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { generateScript } from '@/lib/openai'
 import { GenerateScriptSchema } from '@/lib/validators'
+import { requireApiUser } from '@/lib/api-auth'
 
 // POST - Genera guion con GPT-4o
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'ai')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await request.json()
     const parsed = GenerateScriptSchema.safeParse(body)

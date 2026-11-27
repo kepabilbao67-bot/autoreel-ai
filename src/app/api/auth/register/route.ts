@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase'
+import { createSupabaseRouteClient } from '@/lib/supabase-server'
 import { RegisterSchema } from '@/lib/validators'
 
 // POST - Registro de nuevo usuario
@@ -17,8 +18,10 @@ export async function POST(request: Request) {
 
     const supabase = createSupabaseAdmin()
 
-    // Crear usuario en Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Crear usuario en Auth (cliente con cookies: si no hay confirmacion por
+    // email, la sesion queda iniciada)
+    const authClient = await createSupabaseRouteClient()
+    const { data: authData, error: authError } = await authClient.auth.signUp({
       email: parsed.data.email,
       password: parsed.data.password,
       options: {

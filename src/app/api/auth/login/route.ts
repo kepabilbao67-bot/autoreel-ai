@@ -30,8 +30,9 @@ export async function POST(request: Request) {
     }
 
     // Modo produccion con Supabase
-    const { createSupabaseAdmin } = await import('@/lib/supabase')
-    const supabase = createSupabaseAdmin()
+    // Cliente con cookies: deja la sesion guardada para middleware y APIs
+    const { createSupabaseRouteClient } = await import('@/lib/supabase-server')
+    const supabase = await createSupabaseRouteClient()
     const { data, error } = await supabase.auth.signInWithPassword({
       email: parsed.data.email,
       password: parsed.data.password,

@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseAdmin } from '@/lib/supabase'
+import { createSupabaseRouteClient } from '@/lib/supabase-server'
 
 // POST - Cerrar sesion
 export async function POST() {
   try {
-    const supabase = createSupabaseAdmin()
+    // Borra las cookies de sesion del usuario
+    const supabase = await createSupabaseRouteClient()
     await supabase.auth.signOut()
 
     return NextResponse.json({ message: 'Sesion cerrada' })
