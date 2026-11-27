@@ -13,11 +13,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Sin firma' }, { status: 400 })
     }
 
-    const event = getStripe().webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET || ''
-    )
+    // Sin secreto no se puede verificar la firma. Con un secreto vacio,
+    // cualquiera podria calcular una firma valida y falsificar un pago.
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim()
+    if (!webhookSecret) {
+      console.error('STRIPE_WEBHOOK_SECRET no configurado: webhook rechazado')
+      return NextResponse.json({ error: 'Webhook no configurado' }, { status: 503 })
+    }
+
+    let event: ReturnType<ReturnType<typeof getStripe>['webhooks']['constructEvent']>
+    try {
+      event = getStripe().webhooks.constructEvent(body, signature, webhookSecret)
+    } catch {
+      return NextResponse.json({ error: 'Firma no valida' }, { status: 400 })
+    }
 
     const supabase = createSupabaseAdmin()
 
