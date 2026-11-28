@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Play, Code, Book, Zap, Lock, Server, Database } from 'lucide-react'
+import { Play, Code, Book, Lock, Server, Database } from 'lucide-react'
 
 // Documentacion de la API
 const endpoints = [

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useLocalStorageValue, writeLocalStorage } from '@/hooks/useLocalStorage'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Layout, Share2, X, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
@@ -35,19 +36,14 @@ const steps: OnboardingStep[] = [
 ]
 
 export function Onboarding() {
-  const [isOpen, setIsOpen] = useState(false)
+  // Se abre solo cuando ya en el navegador se sabe que no está completado
+  // (null). En el servidor y durante la hidratación el valor es undefined.
+  const completed = useLocalStorageValue(STORAGE_KEY)
+  const isOpen = completed === null
   const [currentStep, setCurrentStep] = useState(0)
 
-  useEffect(() => {
-    const completed = localStorage.getItem(STORAGE_KEY)
-    if (!completed) {
-      setIsOpen(true)
-    }
-  }, [])
-
   const handleComplete = () => {
-    localStorage.setItem(STORAGE_KEY, 'true')
-    setIsOpen(false)
+    writeLocalStorage(STORAGE_KEY, 'true')
   }
 
   const handleSkip = () => {

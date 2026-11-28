@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Mail, Lock, User, Eye, EyeOff, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
 // Pagina de registro
 export default function RegisterPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -48,7 +50,9 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Error al registrar')
       }
 
-      window.location.href = '/dashboard'
+      // Registro correcto - al dashboard (refresh: el servidor ve la sesión si se inició)
+      router.replace('/dashboard')
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Send, Link2, Check, Clock, Video, Loader2, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useLocalStorageValue, writeLocalStorage } from '@/hooks/useLocalStorage'
+import { Send, Link2, Check, Clock, Video, Loader2 } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
@@ -26,7 +27,16 @@ const STORAGE_KEY = 'autoreel_connected_accounts'
 
 export default function PublishPage() {
   const { videos } = useVideoHistory()
-  const [accounts, setAccounts] = useState<ConnectedAccount[]>([])
+  // Cuentas guardadas en localStorage (vacío en el servidor y durante la hidratación)
+  const storedAccounts = useLocalStorageValue(STORAGE_KEY)
+  const accounts = useMemo<ConnectedAccount[]>(() => {
+    if (!storedAccounts) return []
+    try {
+      return JSON.parse(storedAccounts)
+    } catch {
+      return [] // ignore parse errors
+    }
+  }, [storedAccounts])
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null)
   const [showConnectModal, setShowConnectModal] = useState(false)
   const [connectStep, setConnectStep] = useState<'connecting' | 'success'>('connecting')
@@ -38,20 +48,8 @@ export default function PublishPage() {
   const [isPublishing, setIsPublishing] = useState(false)
   const [published, setPublished] = useState(false)
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        setAccounts(JSON.parse(stored))
-      } catch {
-        // ignore parse errors
-      }
-    }
-  }, [])
-
   const saveAccounts = (newAccounts: ConnectedAccount[]) => {
-    setAccounts(newAccounts)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newAccounts))
+    writeLocalStorage(STORAGE_KEY, JSON.stringify(newAccounts))
   }
 
   const handleConnect = (platform: string) => {

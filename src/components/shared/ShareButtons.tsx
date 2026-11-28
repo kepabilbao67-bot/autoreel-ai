@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Link2, Check, MessageCircle, Twitter } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
 
 interface ShareButtonsProps {
   url?: string
@@ -13,13 +12,11 @@ interface ShareButtonsProps {
 export function ShareButtons({
   url = 'https://autoreel-ai.vercel.app',
   title = 'Mira mi video creado con AutoReel AI',
-  description = 'Crea videos virales con inteligencia artificial',
 }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false)
 
   const encodedUrl = encodeURIComponent(url)
   const encodedTitle = encodeURIComponent(title)
-  const encodedDesc = encodeURIComponent(description)
 
   const shareLinks = [
     {

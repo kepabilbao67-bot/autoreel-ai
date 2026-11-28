@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useLocalStorageValue, writeLocalStorage } from '@/hooks/useLocalStorage'
 import { Download, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -9,18 +10,19 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+const DISMISSED_KEY = 'autoreel_pwa_dismissed'
+
 export function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showBanner, setShowBanner] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
+  // Descartado si la clave existe en localStorage (undefined/null = no descartado)
+  const storedDismissed = useLocalStorageValue(DISMISSED_KEY)
+  const dismissed = typeof storedDismissed === 'string'
 
   useEffect(() => {
     // Check if already dismissed
-    const wasDismissed = localStorage.getItem('autoreel_pwa_dismissed')
-    if (wasDismissed) {
-      setDismissed(true)
-      return
-    }
+    const wasDismissed = localStorage.getItem(DISMISSED_KEY)
+    if (wasDismissed) return
 
     const handler = (e: Event) => {
       e.preventDefault()
@@ -55,8 +57,7 @@ export function InstallPWA() {
 
   const handleDismiss = () => {
     setShowBanner(false)
-    setDismissed(true)
-    localStorage.setItem('autoreel_pwa_dismissed', 'true')
+    writeLocalStorage(DISMISSED_KEY, 'true')
   }
 
   if (dismissed || !showBanner) return null

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Bell, Check, X } from 'lucide-react'
+import { Bell, Check } from 'lucide-react'
 
 // Tipo de notificacion
 interface Notification {
@@ -17,14 +17,28 @@ interface Notification {
 export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter((n) => !n.read).length
 
-  // Cargar notificaciones
+  // Cargar notificaciones al montar. El estado se actualiza en los callbacks de la
+  // promesa (no de forma síncrona en el efecto) y se ignora la respuesta si el
+  // componente ya se desmontó.
   useEffect(() => {
-    fetchNotifications()
+    let ignore = false
+    fetch('/api/notifications')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!ignore && data) setNotifications(data.notifications || [])
+      })
+      .catch((error) => console.error('Error cargando notificaciones:', error))
+      .finally(() => {
+        if (!ignore) setLoading(false)
+      })
+    return () => {
+      ignore = true
+    }
   }, [])
 
   // Cerrar dropdown al hacer click fuera
@@ -37,21 +51,6 @@ export function NotificationBell() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  async function fetchNotifications() {
-    try {
-      setLoading(true)
-      const res = await fetch('/api/notifications')
-      if (res.ok) {
-        const data = await res.json()
-        setNotifications(data.notifications || [])
-      }
-    } catch (error) {
-      console.error('Error cargando notificaciones:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function markAsRead(id: string) {
     try {
