@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireApiUser } from '@/lib/api-auth'
 
 // ============================================================
 // GENERACION DE VIDEO CON IA - via Replicate
@@ -12,6 +13,9 @@ const REPLICATE_API = 'https://api.replicate.com/v1'
 const MODEL = 'stability-ai/stable-video-diffusion'
 
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'videoCreation')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { image } = await request.json()
 
@@ -79,6 +83,9 @@ export async function POST(request: Request) {
 
 // GET - Consultar estado de una generacion en curso
 export async function GET(request: Request) {
+  const auth = await requireApiUser(request, 'videoCreation', { rateLimit: false })
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')

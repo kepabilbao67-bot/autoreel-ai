@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireApiUser } from '@/lib/api-auth'
 
 // Genera hashtags demo inteligentes segun el tema y plataforma
 function getMockHashtags(topic: string, platform: string) {
@@ -18,6 +19,9 @@ function getMockHashtags(topic: string, platform: string) {
 
 // POST - Genera titulo, descripcion y hashtags
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'ai')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { topic, platform, language } = await request.json()
 

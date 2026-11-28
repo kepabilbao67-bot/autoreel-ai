@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import {
   Play,
   LayoutDashboard,
@@ -173,6 +173,7 @@ export default function DashboardLayout({
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
 
   // Inicializar grupos expandidos basado en la ruta activa
   const getInitialExpanded = () => {
@@ -196,11 +197,15 @@ export default function DashboardLayout({
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
-    window.location.href = '/'
+    // Navegación de Next + refresh para que el servidor vea la sesión cerrada
+    router.replace('/')
+    router.refresh()
   }
 
-  // Contenido del sidebar compartido entre desktop y mobile
-  const SidebarContent = ({ onLinkClick }: { onLinkClick?: () => void }) => (
+  // Contenido del sidebar compartido entre desktop y mobile. Es una función que
+  // devuelve JSX (no un componente definido dentro del layout), para que React no
+  // lo desmonte y vuelva a montar en cada render.
+  const renderSidebarContent = (onLinkClick?: () => void) => (
     <>
       {/* Logo */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-dark-border">
@@ -270,7 +275,7 @@ export default function DashboardLayout({
       {/* Sidebar Desktop */}
       <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:fixed lg:inset-y-0">
         <div className="flex flex-col flex-1 glass border-r border-dark-border">
-          <SidebarContent />
+          {renderSidebarContent()}
         </div>
       </aside>
 

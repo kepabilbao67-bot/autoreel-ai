@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Play, Code, Book, Zap, Lock, Server, Database } from 'lucide-react'
+import { Play, Code, Book, Lock, Server, Database } from 'lucide-react'
 
 // Documentacion de la API
 const endpoints = [
@@ -9,9 +9,9 @@ const endpoints = [
     method: 'GET',
     path: '/api/videos',
     description: 'Obtener videos del usuario',
-    params: 'userId (query)',
+    params: 'Requiere sesion iniciada (cookie). El usuario sale de la sesion.',
     example: {
-      request: 'GET /api/videos?userId=user_123',
+      request: 'GET /api/videos',
       response: '{ "videos": [{ "id": "vid_1", "title": "Mi Video", "status": "completed" }] }',
     },
   },
@@ -19,9 +19,9 @@ const endpoints = [
     method: 'POST',
     path: '/api/videos',
     description: 'Crear un nuevo video',
-    params: 'userId, topic, platform, duration, style, language (body)',
+    params: 'topic, platform, duration, style, language (body). Requiere sesion.',
     example: {
-      request: '{ "userId": "user_123", "topic": "Marketing Digital", "platform": "tiktok", "duration": 30, "style": "professional", "language": "es" }',
+      request: '{ "topic": "Marketing Digital", "platform": "tiktok", "duration": 30, "style": "professional", "language": "es" }',
       response: '{ "video": { "id": "vid_2", "title": "Marketing Digital", "status": "draft" } }',
     },
   },
@@ -29,9 +29,9 @@ const endpoints = [
     method: 'DELETE',
     path: '/api/videos',
     description: 'Eliminar un video',
-    params: 'id, userId (query)',
+    params: 'id (query). Requiere sesion.',
     example: {
-      request: 'DELETE /api/videos?id=vid_1&userId=user_123',
+      request: 'DELETE /api/videos?id=vid_1',
       response: '{ "message": "Video eliminado" }',
     },
   },
@@ -77,11 +77,11 @@ const endpoints = [
   },
   {
     method: 'POST',
-    path: '/api/payments/create-checkout',
+    path: '/api/payments',
     description: 'Crear sesion de checkout',
-    params: 'priceId, userId (body)',
+    params: 'plan: creator | business (body). Requiere sesion.',
     example: {
-      request: '{ "priceId": "price_xxx", "userId": "user_123" }',
+      request: '{ "plan": "creator" }',
       response: '{ "url": "https://checkout.stripe.com/..." }',
     },
   },

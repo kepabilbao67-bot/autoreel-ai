@@ -670,6 +670,8 @@ export default function EditorPage() {
                 className={`relative flex-shrink-0 w-11 h-11 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
                   i === currentIdx ? 'border-primary-500 scale-110' : 'border-transparent hover:border-white/30'
                 }`}>
+                {/* Foto subida por el usuario (data: URL): next/image no puede optimizarla */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.src} alt="" className="w-full h-full object-cover" />
                 <button onClick={(e) => { e.stopPropagation(); removePhoto(p.id) }}
                   className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full flex items-center justify-center">

@@ -39,7 +39,6 @@ const mockScheduledPosts = [
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
     const status = searchParams.get('status')
 
     let posts = [...mockScheduledPosts]

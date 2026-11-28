@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
+import { requireApiUser } from '@/lib/api-auth'
 
 // POST - Subir archivos (modo demo: simula el upload)
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'upload')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -49,7 +53,8 @@ export async function POST(request: Request) {
     const { createSupabaseAdmin } = await import('@/lib/supabase')
     const supabase = createSupabaseAdmin()
 
-    const userId = formData.get('userId') as string || 'demo-user'
+    // Carpeta del usuario de la sesion (nunca un userId enviado por el cliente)
+    const userId = auth.id ?? 'demo-user'
     const ext = file.name.split('.').pop()
     const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
 

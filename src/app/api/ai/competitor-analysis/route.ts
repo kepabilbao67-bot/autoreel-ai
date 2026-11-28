@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireApiUser } from '@/lib/api-auth'
 
 function generateMockAnalysis(username: string) {
   const cleanUsername = username
@@ -34,6 +35,9 @@ function generateMockAnalysis(username: string) {
 }
 
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'ai')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { username } = await request.json()
 

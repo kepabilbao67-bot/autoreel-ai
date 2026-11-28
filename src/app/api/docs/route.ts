@@ -28,15 +28,7 @@ const openAPISpec = {
       get: {
         summary: 'Obtener videos del usuario',
         tags: ['Videos'],
-        parameters: [
-          {
-            name: 'userId',
-            in: 'query',
-            required: true,
-            schema: { type: 'string' },
-            description: 'ID del usuario',
-          },
-        ],
+        description: 'Requiere sesion iniciada; el usuario se obtiene de la sesion.',
         responses: {
           '200': {
             description: 'Lista de videos',
@@ -67,9 +59,8 @@ const openAPISpec = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['userId', 'topic', 'platform', 'duration', 'style', 'language'],
+                required: ['topic', 'platform', 'duration', 'style', 'language'],
                 properties: {
-                  userId: { type: 'string' },
                   topic: { type: 'string', description: 'Tema del video' },
                   platform: { type: 'string', enum: ['tiktok', 'reels', 'shorts'] },
                   duration: { type: 'number', description: 'Duracion en segundos' },
@@ -91,7 +82,6 @@ const openAPISpec = {
         tags: ['Videos'],
         parameters: [
           { name: 'id', in: 'query', required: true, schema: { type: 'string' } },
-          { name: 'userId', in: 'query', required: true, schema: { type: 'string' } },
         ],
         responses: {
           '200': { description: 'Video eliminado' },
@@ -246,7 +236,7 @@ const openAPISpec = {
         },
       },
     },
-    '/payments/create-checkout': {
+    '/payments': {
       post: {
         summary: 'Crear sesion de checkout con Stripe',
         tags: ['Pagos'],
@@ -256,10 +246,9 @@ const openAPISpec = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['priceId', 'userId'],
+                required: ['plan'],
                 properties: {
-                  priceId: { type: 'string' },
-                  userId: { type: 'string' },
+                  plan: { type: 'string', enum: ['creator', 'business'] },
                 },
               },
             },

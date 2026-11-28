@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// Middleware para proteger rutas del dashboard
+// Proxy (antes middleware, renombrado en Next.js 16) para proteger rutas del dashboard
 // Si Supabase no esta configurado, permite el acceso (modo demo)
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const response = NextResponse.next({
     request: {
       headers: request.headers,

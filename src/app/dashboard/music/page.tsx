@@ -5,7 +5,6 @@ import { Play, Pause, Music, Search } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 
 // Biblioteca de musica royalty-free
 type Mood = 'Energetico' | 'Chill' | 'Motivacional' | 'Cinematic' | 'Lo-Fi' | 'Pop'

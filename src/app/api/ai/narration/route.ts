@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server'
+import { requireApiUser } from '@/lib/api-auth'
 
 // POST - Generate voice narration (ElevenLabs or mock)
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'ai')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await request.json()
     const { script, voiceId, speed, pitch } = body

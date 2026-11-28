@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
+import { useLocalStorageValue, writeLocalStorage } from '@/hooks/useLocalStorage'
+import { ONBOARDING_STORAGE_KEY } from '@/components/shared/Onboarding'
 import { Download, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -9,18 +12,26 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+const DISMISSED_KEY = 'autoreel_pwa_dismissed'
+
 export function InstallPWA() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showBanner, setShowBanner] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
+  // Descartado si la clave existe en localStorage (undefined/null = no descartado)
+  const storedDismissed = useLocalStorageValue(DISMISSED_KEY)
+  const dismissed = typeof storedDismissed === 'string'
+
+  // El onboarding solo se muestra en /dashboard y hasta que se completa. Mientras
+  // esté abierto, el banner espera (si no, quedaría detrás de su capa oscura).
+  // Al completarlo, writeLocalStorage avisa y el banner aparece sin recargar.
+  const pathname = usePathname()
+  const onboardingCompleted = useLocalStorageValue(ONBOARDING_STORAGE_KEY) === 'true'
+  const waitingForOnboarding = pathname.startsWith('/dashboard') && !onboardingCompleted
 
   useEffect(() => {
     // Check if already dismissed
-    const wasDismissed = localStorage.getItem('autoreel_pwa_dismissed')
-    if (wasDismissed) {
-      setDismissed(true)
-      return
-    }
+    const wasDismissed = localStorage.getItem(DISMISSED_KEY)
+    if (wasDismissed) return
 
     const handler = (e: Event) => {
       e.preventDefault()
@@ -55,11 +66,19 @@ export function InstallPWA() {
 
   const handleDismiss = () => {
     setShowBanner(false)
-    setDismissed(true)
-    localStorage.setItem('autoreel_pwa_dismissed', 'true')
+    writeLocalStorage(DISMISSED_KEY, 'true')
   }
 
-  if (dismissed || !showBanner) return null
+  if (dismissed || !showBanner || waitingForOnboarding) return null
+
+  // Sin el evento beforeinstallprompt (Safari en iPhone/iPad nunca lo envía) el
+  // botón "Instalar" no puede hacer nada: se explica cómo añadirla a mano.
+  // Solo se llega aquí en el navegador (showBanner empieza en false), así que
+  // leer navigator no afecta a la hidratación.
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const manualHint = isIOS
+    ? 'Pulsa Compartir y luego "Añadir a pantalla de inicio".'
+    : 'Abre el menú del navegador y elige "Instalar aplicación" o "Añadir a pantalla de inicio".'
 
   return (
     <AnimatePresence>
@@ -77,15 +96,17 @@ export function InstallPWA() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">Instalar AutoReel AI</p>
               <p className="text-xs text-dark-muted mt-0.5">
-                Accede mas rapido desde tu pantalla de inicio
+                {deferredPrompt ? 'Accede mas rapido desde tu pantalla de inicio' : manualHint}
               </p>
               <div className="flex gap-2 mt-3">
-                <button
-                  onClick={handleInstall}
-                  className="btn-primary text-xs px-3 py-1.5"
-                >
-                  Instalar
-                </button>
+                {deferredPrompt && (
+                  <button
+                    onClick={handleInstall}
+                    className="btn-primary text-xs px-3 py-1.5"
+                  >
+                    Instalar
+                  </button>
+                )}
                 <button
                   onClick={handleDismiss}
                   className="text-xs text-dark-muted hover:text-white px-3 py-1.5 transition-colors"
@@ -96,6 +117,7 @@ export function InstallPWA() {
             </div>
             <button
               onClick={handleDismiss}
+              aria-label="Cerrar"
               className="text-dark-muted hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />

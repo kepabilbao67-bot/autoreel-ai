@@ -35,51 +35,8 @@ export default function ThumbnailsPage() {
   const [selectedBg, setSelectedBg] = useState(presetBackgrounds[0].value)
   const [uploadedImage, setUploadedImage] = useState<string | null>(null)
 
-  // Render canvas
-  const renderCanvas = useCallback(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const width = 1280
-    const height = 720
-    canvas.width = width
-    canvas.height = height
-
-    // Draw background
-    if (uploadedImage) {
-      const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => {
-        ctx.drawImage(img, 0, 0, width, height)
-        drawText(ctx, width, height)
-      }
-      img.src = uploadedImage
-    } else {
-      if (selectedBg.startsWith('linear-gradient')) {
-        // Parse gradient
-        const colors = selectedBg.match(/#[a-fA-F0-9]{6}/g) || ['#667eea', '#764ba2']
-        const angleMatch = selectedBg.match(/(\d+)deg/)
-        const angle = angleMatch ? parseInt(angleMatch[1]) : 135
-        const radians = (angle - 90) * (Math.PI / 180)
-        const x1 = width / 2 - (Math.cos(radians) * width) / 2
-        const y1 = height / 2 - (Math.sin(radians) * height) / 2
-        const x2 = width / 2 + (Math.cos(radians) * width) / 2
-        const y2 = height / 2 + (Math.sin(radians) * height) / 2
-        const gradient = ctx.createLinearGradient(x1, y1, x2, y2)
-        gradient.addColorStop(0, colors[0])
-        gradient.addColorStop(1, colors[1] || colors[0])
-        ctx.fillStyle = gradient
-      } else {
-        ctx.fillStyle = selectedBg
-      }
-      ctx.fillRect(0, 0, width, height)
-      drawText(ctx, width, height)
-    }
-  }, [title, fontSize, fontColor, selectedBg, uploadedImage])
-
-  const drawText = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
+  // Declarada antes de renderCanvas (que la usa) y memorizada con sus dependencias.
+  const drawText = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     if (!title) return
     ctx.font = `bold ${fontSize}px sans-serif`
     ctx.fillStyle = fontColor
@@ -123,7 +80,52 @@ export default function ThumbnailsPage() {
     ctx.shadowBlur = 0
     ctx.shadowOffsetX = 0
     ctx.shadowOffsetY = 0
-  }
+  }, [title, fontSize, fontColor])
+
+  // Render canvas
+  const renderCanvas = useCallback(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    const width = 1280
+    const height = 720
+    canvas.width = width
+    canvas.height = height
+
+    // Draw background
+    if (uploadedImage) {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, width, height)
+        drawText(ctx, width, height)
+      }
+      img.src = uploadedImage
+    } else {
+      if (selectedBg.startsWith('linear-gradient')) {
+        // Parse gradient
+        const colors = selectedBg.match(/#[a-fA-F0-9]{6}/g) || ['#667eea', '#764ba2']
+        const angleMatch = selectedBg.match(/(\d+)deg/)
+        const angle = angleMatch ? parseInt(angleMatch[1]) : 135
+        const radians = (angle - 90) * (Math.PI / 180)
+        const x1 = width / 2 - (Math.cos(radians) * width) / 2
+        const y1 = height / 2 - (Math.sin(radians) * height) / 2
+        const x2 = width / 2 + (Math.cos(radians) * width) / 2
+        const y2 = height / 2 + (Math.sin(radians) * height) / 2
+        const gradient = ctx.createLinearGradient(x1, y1, x2, y2)
+        gradient.addColorStop(0, colors[0])
+        gradient.addColorStop(1, colors[1] || colors[0])
+        ctx.fillStyle = gradient
+      } else {
+        ctx.fillStyle = selectedBg
+      }
+      ctx.fillRect(0, 0, width, height)
+      drawText(ctx, width, height)
+    }
+  }, [drawText, selectedBg, uploadedImage])
+
 
   useEffect(() => {
     renderCanvas()

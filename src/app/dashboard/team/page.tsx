@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState } from 'react'
+import { useLocalStorageValue, writeLocalStorage } from '@/hooks/useLocalStorage'
+import { useNow } from '@/hooks/useNow'
 import { UsersRound, Plus, Trash2, Shield, Edit3, Eye, Mail } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -56,30 +57,26 @@ const defaultMembers: TeamMember[] = [
 ]
 
 export default function TeamPage() {
-  const [members, setMembers] = useState<TeamMember[]>([])
+  // Miembros guardados en localStorage; si no hay (o están corruptos), los de ejemplo.
+  // En el servidor y durante la hidratación la lista está vacía, como antes.
+  const storedMembers = useLocalStorageValue(STORAGE_KEY)
+  const members = useMemo<TeamMember[]>(() => {
+    if (storedMembers === undefined) return []
+    if (storedMembers === null) return defaultMembers
+    try {
+      return JSON.parse(storedMembers)
+    } catch {
+      return defaultMembers
+    }
+  }, [storedMembers])
+  const now = useNow()
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<'admin' | 'editor' | 'viewer'>('editor')
   const [inviteName, setInviteName] = useState('')
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) {
-      try {
-        setMembers(JSON.parse(stored))
-      } catch {
-        setMembers(defaultMembers)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultMembers))
-      }
-    } else {
-      setMembers(defaultMembers)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultMembers))
-    }
-  }, [])
-
   const saveMembers = (updated: TeamMember[]) => {
-    setMembers(updated)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    writeLocalStorage(STORAGE_KEY, JSON.stringify(updated))
   }
 
   const handleInvite = () => {
@@ -107,7 +104,8 @@ export default function TeamPage() {
   }
 
   const formatLastActive = (date: string) => {
-    const diff = Date.now() - new Date(date).getTime()
+    if (now === null) return ''
+    const diff = now - new Date(date).getTime()
     const minutes = Math.floor(diff / 60000)
     if (minutes < 1) return 'Ahora'
     if (minutes < 60) return `Hace ${minutes} min`
@@ -150,8 +148,8 @@ export default function TeamPage() {
         <Card hover={false}>
           <CardContent className="text-center">
             <p className="text-2xl font-bold text-green-400">
-              {members.filter((m) => {
-                const diff = Date.now() - new Date(m.lastActive).getTime()
+              {now === null ? 0 : members.filter((m) => {
+                const diff = now - new Date(m.lastActive).getTime()
                 return diff < 60 * 60 * 1000
               }).length}
             </p>

@@ -70,7 +70,7 @@ interface UploadedFile {
 export default function CreatePage() {
   const [step, setStep] = useState(0)
   const [mode, setMode] = useState<'manual' | 'oneclick'>('oneclick')
-  const [generating, setGenerating] = useState(false)
+  const [, setGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [copied, setCopied] = useState(false)
@@ -368,6 +368,8 @@ Generado con AutoReel AI - autoreel-ai.vercel.app
                       {uploadedFiles.map((file, index) => (
                         <div key={index} className="relative group rounded-lg border border-dark-border p-2 bg-dark-card">
                           {file.preview ? (
+                            // Vista previa de un archivo subido (URL blob:): next/image no puede optimizarla
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={file.preview} alt={file.name} className="w-full h-20 object-cover rounded" />
                           ) : (
                             <div className="w-full h-20 flex items-center justify-center bg-dark-bg rounded">

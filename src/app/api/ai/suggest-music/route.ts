@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { suggestMusic } from '@/lib/openai'
+import { requireApiUser } from '@/lib/api-auth'
 
 // POST - Sugiere musica de fondo
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'ai')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const { topic, style, mood } = await request.json()
 

@@ -9,12 +9,14 @@ const rateLimitStore = new Map<string, RateLimitEntry>()
 
 // Limpiar entradas expiradas cada 5 minutos
 const CLEANUP_INTERVAL = 5 * 60 * 1000
+const MAX_WINDOW_MS = 60 * 60 * 1000
 
 setInterval(() => {
   const now = Date.now()
   for (const [key, entry] of rateLimitStore.entries()) {
-    // Eliminar entradas sin timestamps recientes
-    if (entry.timestamps.length === 0 || entry.timestamps[entry.timestamps.length - 1] < now - 60000) {
+    // Eliminar entradas sin timestamps recientes (usa la ventana mas larga,
+    // 1 hora; con 60s se borraban limites horarios y se reiniciaban antes)
+    if (entry.timestamps.length === 0 || entry.timestamps[entry.timestamps.length - 1] < now - MAX_WINDOW_MS) {
       rateLimitStore.delete(key)
     }
   }
@@ -93,4 +95,6 @@ export const RATE_LIMITS = {
   upload: { maxRequests: 20, windowMs: 60 * 60 * 1000 },
   // AI requests: 30 por hora
   ai: { maxRequests: 30, windowMs: 60 * 60 * 1000 },
+  // Chat del asistente: 60 mensajes por hora
+  chat: { maxRequests: 60, windowMs: 60 * 60 * 1000 },
 } as const

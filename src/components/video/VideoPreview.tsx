@@ -27,7 +27,6 @@ export function VideoPreview({
 }: VideoPreviewProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
   // Obtener el subtitulo actual basado en el tiempo
   const getCurrentSubtitle = useCallback(() => {
@@ -64,16 +63,11 @@ export function VideoPreview({
     return () => clearInterval(interval)
   }, [isPlaying, duration])
 
-  // Cambiar imagen basado en el tiempo
-  useEffect(() => {
-    if (images.length === 0) return
-    const timePerImage = duration / images.length
-    const newIndex = Math.min(
-      Math.floor(currentTime / timePerImage),
-      images.length - 1
-    )
-    setCurrentImageIndex(newIndex)
-  }, [currentTime, images, duration])
+  // Imagen actual según el tiempo: se calcula al renderizar (antes se copiaba a
+  // un estado desde un efecto, lo que forzaba un render extra en cada cambio).
+  const currentImageIndex = images.length === 0
+    ? 0
+    : Math.min(Math.floor(currentTime / (duration / images.length)), images.length - 1)
 
   const platformLabels = {
     tiktok: 'TikTok',
@@ -91,7 +85,8 @@ export function VideoPreview({
         {/* Fondo: imagen real o gradiente */}
         {images.length > 0 ? (
           <>
-            {/* Imagen de fondo real */}
+            {/* Imagen de fondo real (archivos subidos, URL blob:): next/image no puede optimizarlas */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={images[currentImageIndex]}
               alt="Video frame"

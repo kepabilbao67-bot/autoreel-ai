@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Mail, Lock, Eye, EyeOff, LogIn, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
 // Pagina de inicio de sesion
 export default function LoginPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
@@ -32,8 +34,9 @@ export default function LoginPage() {
         throw new Error(data.error || 'Error al iniciar sesion')
       }
 
-      // Login exitoso - redirigir al dashboard
-      window.location.href = '/dashboard'
+      // Login exitoso - redirigir al dashboard (refresh: el servidor ve la cookie nueva)
+      router.replace('/dashboard')
+      router.refresh()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
     } finally {
@@ -63,7 +66,7 @@ export default function LoginPage() {
 
   // Acceso rapido demo (sin necesidad de cuentas)
   const handleDemoAccess = () => {
-    window.location.href = '/dashboard'
+    router.push('/dashboard')
   }
 
   return (

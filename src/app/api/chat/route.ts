@@ -1,4 +1,6 @@
 import OpenAI from 'openai'
+import { NextResponse } from 'next/server'
+import { requireApiUser } from '@/lib/api-auth'
 
 // System prompt para el asistente de AutoReel AI
 const SYSTEM_PROMPT = `Eres AutoReel AI Assistant, un experto en creación de contenido viral para redes sociales. Ayudas a los usuarios a crear mejores videos, dar ideas, optimizar engagement, sugerir tendencias, mejorar guiones, recomendar horarios de publicación y estrategias de crecimiento. Responde siempre en español de forma amigable y concisa. Usa emojis ocasionalmente. Si te piden crear un video, guíalos al flujo de creación. Puedes formatear con **negrita** y listas con - `
@@ -88,6 +90,9 @@ Puedo ayudarte con:
 
 // POST - Endpoint del chatbot
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'chat')
+  if (auth instanceof NextResponse) return auth
+
   try {
     const body = await request.json()
     const { messages } = body as { messages: Array<{ role: string; content: string }> }

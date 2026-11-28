@@ -1,17 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdmin } from '@/lib/supabase'
 import { CreateVideoSchema } from '@/lib/validators'
+import { requireApiUser } from '@/lib/api-auth'
+
+// El usuario se obtiene SIEMPRE de la sesion. Antes se aceptaba un userId
+// enviado por el cliente y, como el cliente admin ignora RLS, cualquiera podia
+// leer, crear o borrar videos de otro usuario cambiando ese parametro.
 
 // GET - Obtener videos del usuario
 export async function GET(request: Request) {
+  const auth = await requireApiUser(request, 'api', { allowAnonymous: false })
+  if (auth instanceof NextResponse) return auth
+  const userId = auth.id
+
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Se requiere userId' }, { status: 400 })
-    }
-
     const supabase = createSupabaseAdmin()
     const { data, error } = await supabase
       .from('videos')
@@ -35,13 +37,15 @@ export async function GET(request: Request) {
 
 // POST - Crear un nuevo video
 export async function POST(request: Request) {
+  const auth = await requireApiUser(request, 'api', { allowAnonymous: false })
+  if (auth instanceof NextResponse) return auth
+  const userId = auth.id
+
   try {
     const body = await request.json()
-    const { userId, ...videoData } = body
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Se requiere userId' }, { status: 400 })
-    }
+    // Un userId enviado por el cliente se ignora
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { userId: _ignored, ...videoData } = body
 
     const parsed = CreateVideoSchema.safeParse(videoData)
     if (!parsed.success) {
@@ -82,16 +86,16 @@ export async function POST(request: Request) {
 
 // DELETE - Eliminar un video
 export async function DELETE(request: Request) {
+  const auth = await requireApiUser(request, 'api', { allowAnonymous: false })
+  if (auth instanceof NextResponse) return auth
+  const userId = auth.id
+
   try {
     const { searchParams } = new URL(request.url)
     const videoId = searchParams.get('id')
-    const userId = searchParams.get('userId')
 
-    if (!videoId || !userId) {
-      return NextResponse.json(
-        { error: 'Se requiere id y userId' },
-        { status: 400 }
-      )
+    if (!videoId) {
+      return NextResponse.json({ error: 'Se requiere id' }, { status: 400 })
     }
 
     const supabase = createSupabaseAdmin()

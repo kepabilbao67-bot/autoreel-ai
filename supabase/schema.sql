@@ -159,6 +159,10 @@ ALTER TABLE scheduled_posts ENABLE ROW LEVEL SECURITY;
 -- Politicas de usuarios
 CREATE POLICY "Users can view own profile" ON users FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON users FOR UPDATE USING (auth.uid() = id);
+-- RLS no limita columnas: sin esto un usuario podia cambiar su propio plan o
+-- videos_count desde el navegador. Solo se permite editar datos de perfil.
+REVOKE UPDATE ON users FROM authenticated, anon;
+GRANT UPDATE (full_name, avatar_url) ON users TO authenticated;
 
 -- Politicas de videos
 CREATE POLICY "Users can view own videos" ON videos FOR SELECT USING (auth.uid() = user_id);
@@ -208,13 +212,14 @@ CREATE TRIGGER videos_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- Trigger para incrementar contador de videos
+-- SECURITY DEFINER: el usuario no tiene permiso de UPDATE sobre videos_count
 CREATE OR REPLACE FUNCTION increment_video_count()
 RETURNS TRIGGER AS $$
 BEGIN
   UPDATE users SET videos_count = videos_count + 1 WHERE id = NEW.user_id;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER video_count_increment
   AFTER INSERT ON videos
@@ -227,7 +232,7 @@ BEGIN
   UPDATE users SET videos_count = GREATEST(0, videos_count - 1) WHERE id = OLD.user_id;
   RETURN OLD;
 END;
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER video_count_decrement
   AFTER DELETE ON videos
