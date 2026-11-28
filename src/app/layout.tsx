@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { ThemeProvider } from '@/components/shared/ThemeProvider'
+import { InstallPWA } from '@/components/shared/InstallPWA'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -49,7 +50,10 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className={inter.className}>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <InstallPWA />
+        </ThemeProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `

@@ -62,6 +62,15 @@ export function InstallPWA() {
 
   if (dismissed || !showBanner) return null
 
+  // Sin el evento beforeinstallprompt (Safari en iPhone/iPad nunca lo envía) el
+  // botón "Instalar" no puede hacer nada: se explica cómo añadirla a mano.
+  // Solo se llega aquí en el navegador (showBanner empieza en false), así que
+  // leer navigator no afecta a la hidratación.
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent)
+  const manualHint = isIOS
+    ? 'Pulsa Compartir y luego "Añadir a pantalla de inicio".'
+    : 'Abre el menú del navegador y elige "Instalar aplicación" o "Añadir a pantalla de inicio".'
+
   return (
     <AnimatePresence>
       <motion.div
@@ -78,15 +87,17 @@ export function InstallPWA() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">Instalar AutoReel AI</p>
               <p className="text-xs text-dark-muted mt-0.5">
-                Accede mas rapido desde tu pantalla de inicio
+                {deferredPrompt ? 'Accede mas rapido desde tu pantalla de inicio' : manualHint}
               </p>
               <div className="flex gap-2 mt-3">
-                <button
-                  onClick={handleInstall}
-                  className="btn-primary text-xs px-3 py-1.5"
-                >
-                  Instalar
-                </button>
+                {deferredPrompt && (
+                  <button
+                    onClick={handleInstall}
+                    className="btn-primary text-xs px-3 py-1.5"
+                  >
+                    Instalar
+                  </button>
+                )}
                 <button
                   onClick={handleDismiss}
                   className="text-xs text-dark-muted hover:text-white px-3 py-1.5 transition-colors"
@@ -97,6 +108,7 @@ export function InstallPWA() {
             </div>
             <button
               onClick={handleDismiss}
+              aria-label="Cerrar"
               className="text-dark-muted hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />
