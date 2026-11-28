@@ -6,7 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Layout, Share2, X, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
-const STORAGE_KEY = 'autoreel_onboarding_completed'
+// Exportada para que InstallPWA sepa si el onboarding sigue abierto.
+export const ONBOARDING_STORAGE_KEY = 'autoreel_onboarding_completed'
+const STORAGE_KEY = ONBOARDING_STORAGE_KEY
 
 interface OnboardingStep {
   icon: React.ReactNode

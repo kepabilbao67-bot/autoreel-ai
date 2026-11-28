@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { useLocalStorageValue, writeLocalStorage } from '@/hooks/useLocalStorage'
+import { ONBOARDING_STORAGE_KEY } from '@/components/shared/Onboarding'
 import { Download, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -18,6 +20,13 @@ export function InstallPWA() {
   // Descartado si la clave existe en localStorage (undefined/null = no descartado)
   const storedDismissed = useLocalStorageValue(DISMISSED_KEY)
   const dismissed = typeof storedDismissed === 'string'
+
+  // El onboarding solo se muestra en /dashboard y hasta que se completa. Mientras
+  // esté abierto, el banner espera (si no, quedaría detrás de su capa oscura).
+  // Al completarlo, writeLocalStorage avisa y el banner aparece sin recargar.
+  const pathname = usePathname()
+  const onboardingCompleted = useLocalStorageValue(ONBOARDING_STORAGE_KEY) === 'true'
+  const waitingForOnboarding = pathname.startsWith('/dashboard') && !onboardingCompleted
 
   useEffect(() => {
     // Check if already dismissed
@@ -60,7 +69,7 @@ export function InstallPWA() {
     writeLocalStorage(DISMISSED_KEY, 'true')
   }
 
-  if (dismissed || !showBanner) return null
+  if (dismissed || !showBanner || waitingForOnboarding) return null
 
   // Sin el evento beforeinstallprompt (Safari en iPhone/iPad nunca lo envía) el
   // botón "Instalar" no puede hacer nada: se explica cómo añadirla a mano.
